@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,76 +8,120 @@
 
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             background: #f4f4f4;
             color: #333;
             margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            padding: 40px;
         }
 
         .container {
-            background: white;
+            max-width: 700px;
+            margin: 0 auto;
+            background: #ffffff;
             padding: 40px;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            text-align: center;
         }
-        
+
+        .responsive-img {
+            display: block;
+            width: 200px;
+            height: auto;
+            margin: 0 auto 30px auto;
+        }
+
         h1 {
-            margin-top: 0;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        
-        responsive-img {
-            width: 200px;       /* Or any explicit size like 400px */
-            height: auto;      /* Automatically calculates the correct height */
-            display: block;    /* Removes extra baseline spacing */
-            justify: left
-            justify-content: left
-        }
-        
-        justified-text-left {
-            text-align: left;
-        }
-
-        justified-text-center {
             text-align: center;
+            margin: 0;
+            color: #222;
         }
 
-        justified-text-right {
-            text-align: right;
+        h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #444;
+            border-bottom: 2px solid #e5e5e5;
+            padding-bottom: 8px;
         }
-        
+
+        ul {
+            list-style-type: disc;
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        a {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .description {
+            font-size: 0.95em;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        footer {
+            margin-top: 35px;
+            text-align: center;
+            font-size: 0.85em;
+            color: #888;
+        }
     </style>
 </head>
+
 <body>
 
 <div class="container">
-<p class="justified-text-center">
-    <img src="logo.png" alt="Summit x Jackson logo" class="responsive-img" width="200">
-<br>
-</p>
-<p class="justified-text-left" class="body">
-<br><fontsize="10">
-    <bold></bold><a href="https://summitjackson.github.io/stormcast_v0.21.html">∙ StormCast Beta - Latest stable build</a></bold>
-<br>
-    Currently not polling live radar data.
-<br>
-<br>
-    <bold><a href="https://summitjackson.github.io/stormcast_v0.23_wb.html">∙ StormCast Beta - Latest unstable build</a></bold>
-<br>
-    Buttons non-functional.
-</p>
-<br>
-<br>
+
+    <img src="logo.png"
+         alt="Summit x Jackson Logo"
+         class="responsive-img">
+
+    <h1>Summit x Jackson</h1>
+
+    <h2>StormCast Downloads</h2>
+
+    <ul>
+
+        <li>
+            <a href="https://summitjackson.github.io/stormcast_v0.21.html">
+                StormCast Beta — Latest Stable Build
+            </a>
+
+            <div class="description">
+                Currently not polling live radar data.
+            </div>
+        </li>
+
+        <li>
+            <a href="https://summitjackson.github.io/stormcast_v0.23_wb.html">
+                StormCast Beta — Latest Unstable Build
+            </a>
+
+            <div class="description">
+                Buttons are currently non-functional.
+            </div>
+        </li>
+
+    </ul>
+
+    <footer>
+        &copy; 2026 Summit x Jackson
+    </footer>
+
 </div>
+
 </body>
 </html>
+```

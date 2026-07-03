@@ -1,0 +1,3085 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=Archivo+Narrow:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<title>🪩 StormCast Beta - v0.23</title>
+<style>
+  :root{--bg:#0c0d0e;--panel:#16181b;--panel2:#1c1f23;--line:#2c3036;--text:#e4e6e9;--sub:#8b929b;--blue:#5a9bf0;--green:#52c074;--red:#ff4d42;--amber:#e8a13a;--purple:#a878e8;--haz-tor:#ff4d42;--haz-stw:#ff9f43;--haz-flood-watch:#5a9bf0;--haz-stm-watch:#f0cc4c;}
+  [data-theme="light"]{--bg:#cfd5dd;--panel:#e2e7ee;--panel2:#d8dee7;--line:#a8b4c2;--text:#151b22;--sub:#4a5665;--blue:#2f5fb0;--green:#2f7a4a;--red:#c22a1f;--amber:#9a6a1c;--purple:#6a3fae;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Archivo',Arial,sans-serif;height:100vh;overflow:hidden;color:var(--text);background:var(--bg);}
+  .ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;display:inline-block;font-feature-settings:'liga';-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased;}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;}}
+
+  .app{position:absolute;inset:0;display:grid;grid-template-columns:var(--colL,250px) 1fr var(--colR,330px);grid-template-rows:76px 1fr;gap:7px;padding:7px;}
+
+  body.ui-hidden .app{padding:0;gap:0;grid-template-columns:1fr;grid-template-rows:1fr;}
+  body.ui-hidden .topbar,body.ui-hidden .tele-row,body.ui-hidden .util,body.ui-hidden .info,body.ui-hidden .deck,body.ui-hidden .splitter{display:none!important;}
+  body.ui-hidden .radar{grid-column:1!important;grid-row:1!important;border:none;}
+
+  .topbar{grid-column:1/4;grid-row:1;background:var(--panel);border:1px solid var(--line);display:grid;grid-template-columns:var(--colL,250px) 1fr var(--colR,330px);align-items:center;gap:8px;padding:5px 7px;overflow:hidden;}
+  .top-left{display:flex;align-items:center;gap:8px;min-width:0;width:100%;}
+  .draw-inline{display:flex;align-items:center;gap:5px;min-width:0;width:100%;margin:0;padding:4px 7px;border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;overflow:auto;}
+  .draw-inline .toolbtn{width:46px;height:30px;gap:0;}
+  .draw-inline .toolbtn small{display:none;}
+  .draw-inline .toolbtn .ms{font-size:18px;}
+  .tray{display:none;align-items:center;gap:6px;padding:3px 6px;border:1px solid var(--line);background:var(--panel2);border-radius:4px;max-width:min(45vw,520px);overflow:auto;}
+  .tray.show{display:flex;}
+  .tray .ti{height:30px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:600 12px 'Archivo',sans-serif;padding:0 8px;}
+  .tray input[type="color"]{width:34px;height:30px;padding:0;border:1px solid var(--line);background:var(--panel);}
+  .toplogo{width:150px;height:60px;object-fit:contain;border:none;background:transparent;padding:0;flex-shrink:0;}
+  .toplogo.hidden{display:none;}
+  #logoLeft.toplogo{width:220px;height:58px;}
+  .topbar .site{font-size:14px;font-weight:800;}
+  .topbar .prod{font-size:13px;font-weight:700;color:var(--blue);}
+  .topbar .loc{font-size:12px;color:var(--sub);}
+  .topbar .stamp{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .top-actions{display:flex;align-items:center;gap:6px;}
+  .top-right{display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:0;}
+  .livechip{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--red);letter-spacing:.06em;text-transform:uppercase;}
+  .livechip .dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1.6s infinite;}
+  .setbtn{width:36px;height:28px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .setbtn .ms{font-size:18px;}
+  .hidebtn{height:28px;min-width:82px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 8px;font:700 11px 'Archivo',sans-serif;letter-spacing:.04em;text-transform:uppercase;}
+  .hidebtn.on{border-color:var(--amber);color:var(--amber);background:rgba(232,161,58,.14);}
+  .themebtn{width:32px;height:28px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .themebtn .ms{font-size:18px;}
+
+  .toolframe{background:var(--panel);border:1px solid var(--line);padding:7px;display:flex;}
+  .toolstrip{background:transparent;border:none;display:flex;align-items:center;gap:8px;overflow:auto;width:100%;}
+  .toolbtn{width:70px;height:40px;background:var(--panel2);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--sub);cursor:pointer;transition:.12s;flex-shrink:0;}
+  .toolbtn .ms{font-size:20px;}
+  .toolbtn small{font-size:8px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+  .toolbtn:hover{border-color:var(--blue);color:var(--text);}
+  .toolbtn.on{border-color:var(--amber);color:var(--amber);background:rgba(232,161,58,.14);}
+  #toolDraw{border-color:rgba(139,146,155,.65);color:#9aa2ac;background:rgba(139,146,155,.16);}
+  #toolDraw.on{border-color:#2f8bff;color:#dcecff;background:rgba(47,139,255,.34);box-shadow:0 0 12px rgba(47,139,255,.35);}
+
+  .util{grid-column:1;grid-row:2;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;padding:10px;gap:10px;overflow:auto;min-width:250px;}
+  .radsel{border:1px solid var(--line);background:var(--panel2);padding:8px;display:grid;gap:6px;}
+  .radsel label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:800;}
+  .radsel select{height:30px;width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);font:600 12px 'Archivo',sans-serif;padding:0 6px;}
+  .radsel-tools{display:flex;align-items:center;gap:6px;}
+  .radsel-tools input{height:30px;flex:1 1 auto;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--text);font:600 12px 'Archivo',sans-serif;padding:0 8px;outline:none;}
+  .radsel-tools input:focus{border-color:var(--blue);}
+  .iconbtn{height:30px;min-width:30px;border:1px solid var(--line);background:var(--panel);color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 6px;}
+  .iconbtn .ms{font-size:18px;}
+  .iconbtn.on{border-color:var(--amber);color:var(--amber);background:rgba(232,161,58,.14);}
+  .favsec{border:1px solid var(--line);background:var(--panel2);padding:7px;display:grid;gap:6px;}
+  .favsec .hd{display:flex;align-items:center;justify-content:flex-start;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:800;}
+  .favgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+  .favgrid .setbtn2{height:42px;font-family:'Archivo Narrow','Archivo',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;}
+  .favgrid .setbtn2 .g{font-size:16px;font-weight:800;line-height:1;}
+  .favgrid .setbtn2 .sid{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);line-height:1;}
+  .favgrid .setbtn2.fav-on{border-color:rgba(90,155,240,.55);background:rgba(90,155,240,.16);}
+  .favgrid .setbtn2.home-on{box-shadow:0 0 0 1px rgba(82,192,116,.5) inset;}
+  .favgrid .setbtn2 .home-dot{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 2px rgba(82,192,116,.22);}
+  .tilt-wrap{border:1px solid var(--line);background:var(--panel2);padding:6px;display:grid;gap:5px;}
+  .tilt-wrap .lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:800;}
+  .tilt-row{display:flex;gap:5px;flex-wrap:wrap;}
+  .tilt-btn{height:24px;min-width:42px;padding:0 7px;border:1px solid var(--line);background:var(--panel);color:var(--sub);font:700 10px 'Archivo',sans-serif;cursor:pointer;}
+  .tilt-btn.on{border-color:var(--blue);color:var(--blue);background:rgba(90,155,240,.14);}
+  .fav{border:1px solid var(--line);background:var(--panel);padding:5px;display:grid;gap:4px;}
+  .fav .nm{font:700 11px 'Archivo Narrow','Archivo',sans-serif;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .fav .nm.empty{color:var(--sub);}
+  .fav .acts{display:flex;gap:4px;}
+  .fav .acts button{flex:1;height:24px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:700 10px 'Archivo',sans-serif;cursor:pointer;padding:0;}
+  .fav .acts button.on{border-color:var(--amber);color:var(--amber);}
+  .util-tools{display:none;}
+  .sectitle{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:800;margin-bottom:3px;}
+  .geoedit{border:1px solid var(--line);background:var(--panel2);padding:6px;display:grid;gap:5px;}
+  .geoedit .lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:800;}
+  .geo-mini{display:grid;grid-template-columns:1fr;gap:6px;align-items:center;}
+  .georow{display:grid;grid-template-columns:42px auto;align-items:center;gap:5px;justify-content:start;}
+  .georow-latlon{grid-template-columns:52px 1fr 1fr;}
+  .georow label{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
+  .georow input{height:24px;width:9ch;min-width:9ch;max-width:9ch;resize:none;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:0 6px;font:600 11px 'Archivo Narrow','Archivo',sans-serif;outline:none;}
+  .georow input:focus{border-color:var(--blue);}
+  .navrow{display:flex;gap:6px;align-items:center;}
+  .zoom{display:flex;gap:5px;}
+  .zb{width:34px;height:30px;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:19px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .zb:hover{border-color:var(--blue);}
+  .compass{display:none;}
+
+  .radar{grid-column:2;grid-row:2;position:relative;border:1px solid var(--line);overflow:hidden;background:#05070b;}
+  .radar .leaflet-container,
+  .radar .leaflet-grab,
+  .radar .leaflet-grabbing,
+  .radar .leaflet-dragging,
+  .radar .leaflet-interactive,
+  .radar .report-marker,
+  .radar .report-marker *{cursor:url('./assets/cursors/minimalist-point.cur') 2 2,url('./assets/cursors/minimalist-point.png') 2 2,default!important;}
+  #map{position:absolute;inset:0;}
+  .map-wave-layer{position:absolute;inset:0;z-index:454;pointer-events:none;overflow:hidden;}
+  .map-wave{position:absolute;width:18px;height:18px;border:2px solid rgba(255,77,66,.95);border-radius:50%;transform:translate(-50%,-50%) scale(.35);opacity:.95;box-shadow:0 0 0 1px rgba(255,77,66,.3),0 0 16px rgba(255,77,66,.45);animation:mapWave .7s ease-out forwards;}
+  .tele{position:absolute;inset:0;z-index:455;pointer-events:none;}
+  .tele.active{pointer-events:auto;cursor:crosshair;}
+  .gfx-layer{position:absolute;inset:0;z-index:460;pointer-events:none;}
+  .gfx{position:absolute;top:50%;left:50%;width:40%;transform:translate(-50%,-50%) rotate(0deg);pointer-events:auto;}
+  .gfx img{display:block;width:100%;height:auto;pointer-events:none;user-select:none;}
+  .gfx-box{position:absolute;inset:0;border:1.5px solid var(--amber);outline:1px solid rgba(0,0,0,.4);cursor:move;display:none;}
+  .gfx.selected .gfx-box{display:block;}
+  .gfx-h{position:absolute;width:11px;height:11px;background:#fff;border:1.5px solid var(--amber);}
+  .gfx-h.nw{top:-6px;left:-6px;cursor:nwse-resize;}.gfx-h.n{top:-6px;left:50%;transform:translateX(-50%);cursor:ns-resize;}.gfx-h.ne{top:-6px;right:-6px;cursor:nesw-resize;}
+  .gfx-h.w{top:50%;left:-6px;transform:translateY(-50%);cursor:ew-resize;}.gfx-h.e{top:50%;right:-6px;transform:translateY(-50%);cursor:ew-resize;}
+  .gfx-h.sw{bottom:-6px;left:-6px;cursor:nesw-resize;}.gfx-h.s{bottom:-6px;left:50%;transform:translateX(-50%);cursor:ns-resize;}.gfx-h.se{bottom:-6px;right:-6px;cursor:nwse-resize;}
+  .gfx-rot{position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:13px;height:13px;border-radius:50%;background:#fff;border:1.5px solid var(--amber);cursor:grab;}
+  .gfx-rot::before{content:'';position:absolute;top:13px;left:50%;transform:translateX(-50%);width:1.5px;height:17px;background:var(--amber);}
+
+  .tele-bar{position:static;transform:none;z-index:auto;background:transparent;border:none;padding:0;display:flex;gap:5px;align-items:center;border-radius:0;}
+  .tele-bar.show{display:flex;}
+  .tele-bar .tb{width:34px;height:34px;background:var(--panel2);border:1px solid var(--line);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .tele-bar .tb .ms{font-size:19px;}
+  .tele-bar .tb.on{border-color:var(--amber);color:var(--amber);background:rgba(232,161,58,.18);}
+  .tele-bar .sw{display:flex;gap:3px;align-items:center;padding:0 4px;}
+  .tele-bar .sw.linew{gap:4px;padding:0 6px;}
+  .tele-bar .sw.linew label{font:700 10px 'Archivo',sans-serif;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;}
+  .tele-bar .sw.linew input{width:64px;height:22px;accent-color:var(--blue);}
+  .tele-bar .col{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;}
+  .tele-bar .col.on{border-color:#fff;}
+  .tele-bar .div{width:1px;align-self:stretch;background:var(--line);margin:0 2px;}
+  .tele-bar.draw-off{pointer-events:none;}
+  .tele-bar.draw-off .tb,.tele-bar.draw-off .col{opacity:.56;}
+  .tele-bar.draw-off .tb.on{border-color:var(--line);color:#7b818a;background:rgba(255,255,255,.04);}
+  .ui-tip{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:900;background:rgba(10,12,15,.92);border:1px solid var(--line);color:#f2f5f8;font:700 12px 'Archivo',sans-serif;letter-spacing:.02em;padding:8px 10px;opacity:0;pointer-events:none;transition:opacity .18s;}
+  .ui-tip.show{opacity:1;}
+  .nearest-pop{position:absolute;z-index:470;min-width:220px;background:rgba(10,12,15,.96);border:1px solid var(--line);padding:6px;display:none;box-shadow:0 10px 24px rgba(0,0,0,.45);}
+  .nearest-pop.show{display:block;}
+  .stc-tip{position:fixed;z-index:960;max-width:230px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--blue);color:var(--text);font:600 11px/1.4 'Archivo',sans-serif;padding:7px 10px;box-shadow:0 10px 22px rgba(0,0,0,.45);pointer-events:none;opacity:0;transform:translateY(3px);transition:opacity .1s ease,transform .1s ease;}
+  .stc-tip.show{opacity:1;transform:translateY(0);}
+  .nearest-pop .ttl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:800;margin-bottom:5px;}
+  .nearest-pop .itm{padding:6px;border:1px solid var(--line);background:var(--panel2);margin-top:4px;display:grid;gap:2px;cursor:pointer;}
+  .nearest-pop .itm:hover{border-color:var(--blue);}
+  .nearest-pop .id{font-size:12px;font-weight:800;color:var(--text);}
+  .nearest-pop .meta{font-size:11px;color:var(--sub);}
+  .report-marker{background:transparent!important;border:none!important;}
+  .report-marker .rmk{width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(0,0,0,.4);box-shadow:0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;}
+  .report-marker .rmk .ms{font-size:15px;color:#0c0d0e;}
+
+  .info{grid-column:3;grid-row:2;display:flex;flex-direction:column;gap:7px;min-height:0;overflow:hidden;height:100%;position:relative;transition:transform .22s ease,opacity .22s ease;}
+  .info.frame-hidden{transform:translateX(calc(100% + 12px));opacity:0;pointer-events:none;}
+  .app.info-collapsed .radar,.app.info-collapsed .deck{grid-column:2/4;}
+  .alerts-reopen{position:absolute;right:10px;top:90px;z-index:490;width:34px;height:34px;border:1px solid var(--line);background:var(--panel);color:var(--text);display:none;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;box-shadow:0 6px 14px rgba(0,0,0,.35);}
+  .alerts-reopen .ms{font-size:20px;}
+  .app.info-collapsed .alerts-reopen{display:flex;}
+  .clock{flex-shrink:0;background:var(--panel);border:1px solid var(--line);padding:10px 12px;display:flex;align-items:flex-start;justify-content:flex-start;gap:10px;}
+  .clock .lt{font-size:clamp(24px,3vw,36px);font-weight:800;line-height:.95;font-variant-numeric:tabular-nums;text-align:left;white-space:nowrap;}
+  .clock .lt .z{font-size:14px;font-weight:700;color:var(--sub);margin-left:5px;}
+  .clock .ut{font-size:13px;color:var(--sub);margin-top:3px;font-variant-numeric:tabular-nums;text-align:left;white-space:nowrap;}
+  .clock .times{display:grid;gap:3px;min-width:0;}
+  .clock .livechip{font-size:10px;letter-spacing:.05em;}
+  .clock .tg{display:none;}
+
+  .info-head{background:var(--panel);border:1px solid var(--line);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .info-head .ttl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:800;}
+  .info-stack{display:flex;flex-direction:column;gap:7px;min-height:0;overflow:hidden;max-height:2000px;opacity:1;transition:max-height .25s ease,opacity .22s ease;}
+  .info.frame-hidden .info-stack{max-height:0;opacity:0;pointer-events:none;}
+  .pbox{background:var(--panel);border:1px solid var(--line);overflow:hidden;min-height:60px;transition:height .24s ease;}
+  .pbox.warnbox{height:var(--warnH,140px);flex-shrink:0;}
+  .pbox.watchbox{height:var(--watchH,110px);flex-shrink:0;}
+  .pbox.repbox{flex:1;min-height:80px;}
+  .pbox.collapsed{height:46px!important;min-height:46px;}
+  .phead{position:sticky;top:0;background:var(--panel2);border-bottom:1px solid var(--line);padding:8px 11px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--sub);display:flex;align-items:center;justify-content:space-between;gap:7px;}
+  .pflt{display:flex;align-items:center;gap:6px;margin-left:auto;}
+  .pflt select,.pflt label{font:600 10px 'Archivo',sans-serif;color:var(--sub);}
+  .pflt select{height:24px;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:0 4px;}
+  .sortbtn{height:24px;min-width:108px;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:0 6px;font:700 10px 'Archivo',sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;justify-content:space-between;gap:6px;}
+  .sortbtn .ico{font-size:14px;color:var(--sub);}
+  .phead-title{display:flex;align-items:center;gap:7px;}
+  .phead .dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1.6s infinite;}
+  .phead-btn{background:var(--panel);border:1px solid var(--line);color:var(--sub);cursor:pointer;font:inherit;padding:0;display:flex;align-items:center;justify-content:center;border-radius:4px;width:32px;height:32px;transition:.15s;}
+  .phead-btn:hover{background:rgba(255,255,255,.08);color:var(--text);}
+  .phead-btn .ms{font-size:20px;line-height:1;}
+  .pbody{padding:10px 11px;max-height:900px;opacity:1;overflow:auto;transition:max-height .24s ease,opacity .2s ease,padding .2s ease;}
+  .pbox.collapsed .pbody{max-height:0;opacity:0;padding-top:0;padding-bottom:0;}
+
+  .alert{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+  .alert:last-child{border-bottom:none;}
+  .alert .alert-text{flex:1;}
+  .warnbox .phead-title{color:var(--haz-stw);}
+  .watchbox .phead-title{color:var(--haz-stm-watch);}
+  .alert b{display:block;color:var(--red);font-size:15px;font-weight:800;}
+  .alert[data-hazard="tor"] b{color:var(--haz-tor);}
+  .alert[data-hazard="stw"] b{color:var(--haz-stw);}
+  .alert[data-hazard="flood-watch"] b{color:var(--haz-flood-watch);}
+  .alert[data-hazard="stm-watch"] b{color:var(--haz-stm-watch);}
+  .alert span{font-size:12.5px;color:var(--sub);}
+  .pinpoint-btn{background:var(--panel2);border:1px solid var(--line);color:var(--sub);cursor:pointer;border-radius:4px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;}
+  .pinpoint-btn:hover{background:rgba(255,255,255,.07);color:var(--text);}
+
+  .lsr{display:grid;grid-template-columns:1fr auto;gap:8px 10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px;line-height:1.4;}
+  .lsr:last-child{border-bottom:none;}
+  .lsr-main{display:grid;gap:4px;min-width:0;}
+  .lsr-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .lsr-t{color:var(--sub);font-weight:700;flex-shrink:0;}
+  .lsr-e{color:var(--amber);font-weight:800;display:flex;align-items:center;gap:5px;}
+  .lsr-m{color:var(--text);font-weight:800;}
+  .lsr-l{color:var(--sub);}
+  .report-icon{display:inline-flex;align-items:center;justify-content:center;font-size:17px;line-height:1;}
+
+  .vsplit{height:7px;flex-shrink:0;cursor:ns-resize;background:transparent;margin:-3px 0;position:relative;z-index:5;}
+  .vsplit:hover{background:rgba(90,155,240,.35);}
+
+  .deck{grid-column:2;grid-row:2;align-self:end;height:var(--rowB,200px);background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;gap:8px;padding:7px 11px;overflow:hidden;min-height:185px;z-index:475;}
+  .deck-rows{display:flex;flex-direction:column;gap:9px;overflow:auto;}
+  .row{display:flex;align-items:flex-start;justify-content:center;gap:11px;flex-wrap:wrap;overflow:auto;}
+  .grp{flex-shrink:0;display:flex;flex-direction:column;gap:4px;}
+  .grp.loop{min-width:0;flex:1 1 100%;}
+  .glabel{font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;text-align:center;}
+  .keys{display:grid;gap:5px;padding:5px;border-radius:4px;justify-content:center;}
+  .grp.product .keys,.grp.layer .keys{grid-template-columns:repeat(5,72px);grid-template-rows:repeat(2,72px);}
+  .grp.views .keys{grid-template-columns:repeat(2,72px);grid-template-rows:repeat(2,72px);}
+  .grp.broadcast .keys{grid-template-columns:72px;grid-template-rows:repeat(2,72px);}
+  .grp.product .keys{background:rgba(90,155,240,.07);border:1px solid rgba(90,155,240,.32);}
+  .grp.product .glabel{color:var(--blue);}
+  .grp.layer .keys{background:rgba(82,192,116,.07);border:1px solid rgba(82,192,116,.32);}
+  .grp.layer .glabel{color:var(--green);}
+  .grp.views .keys{background:rgba(168,120,232,.07);border:1px solid rgba(168,120,232,.32);}
+  .grp.views .glabel{color:var(--purple);}
+  .grp.loop .keys{background:rgba(232,161,58,.07);border:1px solid rgba(232,161,58,.32);}
+  .grp.loop .glabel{color:var(--amber);}
+  .grp.broadcast .keys{background:rgba(255,77,66,.08);border:1px solid rgba(255,77,66,.35);}
+  .grp.broadcast .glabel{color:var(--red);}
+
+  .key{flex-shrink:0;width:72px;height:72px;background:var(--panel2);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:700;color:var(--sub);cursor:pointer;transition:transform .08s;user-select:none;}
+  .key:hover{transform:translateY(-1px);}
+  .key .ms{font-size:26px;color:inherit;}
+  .key .g{font-size:22px;font-weight:800;color:inherit;}
+  .key.on{color:var(--text);}
+  .key.product.on{border-color:var(--blue);background:rgba(90,155,240,.22);box-shadow:0 0 10px rgba(90,155,240,.3);}
+  .key.product.on .ms,.key.product.on .g{color:var(--blue);}
+  .key.layer.on{border-color:var(--green);background:rgba(82,192,116,.22);}
+  .key.layer.on .ms,.key.layer.on .g{color:var(--green);}
+  .key.views.on{border-color:var(--purple);background:rgba(168,120,232,.22);}
+  .key.views.on .g{color:var(--purple);}
+  .key.loop.on{border-color:var(--amber);background:rgba(232,161,58,.22);box-shadow:0 0 10px rgba(232,161,58,.3);}
+  .key.loop.on .ms{color:var(--amber);}
+  .key.broadcast.on{border-color:var(--red);background:rgba(255,77,66,.2);box-shadow:0 0 10px rgba(255,77,66,.3);}
+  .key.broadcast.on .ms{color:var(--red);}
+  .key.placeholder{cursor:default;pointer-events:none;opacity:.24;}
+  .key.placeholder:hover{transform:none;}
+  .key.sm{width:52px;height:52px;font-size:8.5px;gap:2px;}
+  .key.sm .ms{font-size:20px;}
+  .key.flash{filter:brightness(1.16);transform:translateY(-1px);}
+
+  .timeline-wrap{display:grid;gap:6px;padding:0 5px 5px;min-width:0;width:100%;}
+  .timeline-title{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--sub);font-weight:800;display:flex;justify-content:flex-end;}
+  .timeline-title .fc{color:var(--text);}
+  .track{position:relative;height:9px;background:var(--panel2);border:1px solid var(--line);cursor:pointer;}
+  .ticks{position:absolute;inset:0;display:flex;justify-content:space-between;padding:0 1px;}
+  .ticks i{width:1px;background:var(--line);}
+  .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--blue),var(--amber));}
+  .knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:15px;height:15px;background:#fff;border:1px solid var(--blue);box-shadow:0 0 7px rgba(90,155,240,.5);}
+
+  .splitter{position:absolute;z-index:470;background:transparent;}
+  .splitter:hover{background:rgba(90,155,240,.35);}
+  .splitter.v{width:7px;cursor:ew-resize;}
+  .splitter.h{height:7px;cursor:ns-resize;left:7px;right:7px;display:none;}
+
+  .util .grp.loop{display:grid;gap:6px;}
+  .util .grp.loop>.glabel{display:none;}
+  .util .grp.loop .keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:6px;}
+  .util .grp.loop .keys .loop-head{grid-column:1/4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:var(--amber);text-align:left;padding:1px 2px 0;}
+  .util .grp.loop .key.sm{width:100%;height:48px;}
+  .util .grp.loop .timeline-wrap{grid-column:1/4;padding:0;}
+  .util .grp.loop .timeline-title{justify-content:flex-start;}
+  .loop-frames{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--sub);font-weight:800;}
+  .loop-frames select{height:24px;background:var(--panel);border:1px solid var(--line);color:var(--text);font:700 11px 'Archivo',sans-serif;padding:0 4px;}
+  .geo-mini .zoom-inline{display:flex;align-items:center;gap:6px;}
+  .geo-mini .zoom-inline .georow{grid-template-columns:42px auto;}
+  .text-edit{position:absolute;z-index:480;border:1px solid var(--blue);background:rgba(8,10,14,.84);color:#fff;resize:none;outline:none;padding:6px 8px;font:700 28px 'Archivo',sans-serif;line-height:1.1;}
+  .text-edit-tools{position:absolute;z-index:481;display:flex;align-items:center;gap:6px;height:28px;}
+  .text-edit-font{height:28px;border:1px solid var(--blue);background:rgba(8,10,14,.92);color:#fff;font:700 12px 'Archivo',sans-serif;padding:0 6px;min-width:150px;}
+  .text-edit-size{width:110px;accent-color:var(--blue);}
+
+  .draw-shadow-pop{position:fixed;z-index:950;min-width:230px;background:var(--panel);border:1px solid var(--line);box-shadow:0 10px 22px rgba(0,0,0,.45);padding:8px;display:none;gap:7px;}
+  .draw-shadow-pop.show{display:grid;}
+  .draw-shadow-pop .hd{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:800;display:flex;align-items:center;justify-content:space-between;}
+  .draw-shadow-pop .hd .x{cursor:pointer;color:var(--sub);}
+  .draw-shadow-pop .rw{display:grid;grid-template-columns:80px 1fr;align-items:center;gap:6px;}
+  .draw-shadow-pop .rw label{font-size:11px;color:var(--sub);font-weight:700;}
+  .draw-shadow-pop .rw input[type="range"]{width:100%;accent-color:var(--blue);}
+  .draw-shadow-pop .rw input[type="color"]{width:100%;height:26px;padding:0;border:1px solid var(--line);background:var(--panel2);}
+
+  .build{position:fixed;top:0;right:0;bottom:0;width:300px;background:var(--panel);border-left:1px solid var(--line);z-index:600;transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column;box-shadow:-8px 0 24px rgba(0,0,0,.4);}
+  .build.show{transform:translateX(0);}
+  .build h3{margin:0;padding:12px 14px;font-size:14px;font-weight:800;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
+  .build h3 .ms{font-size:20px;color:var(--amber);}
+  .build h3 .x{margin-left:auto;cursor:pointer;color:var(--sub);}
+  .build-body{flex:1;overflow:auto;padding:12px 14px;}
+  .build-sec{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);font-weight:800;margin:6px 0 8px;}
+  .addbtn{width:100%;background:var(--panel2);border:1px dashed var(--line);color:var(--text);font-family:'Archivo';font-weight:700;font-size:12px;padding:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;}
+  .addbtn:hover{border-color:var(--amber);color:var(--amber);}
+  .addbtn .ms{font-size:18px;}
+  .lyr{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--line);background:var(--panel2);margin-bottom:6px;}
+  .lyr .thumb{width:34px;height:34px;background:#000;border:1px solid var(--line);object-fit:contain;flex-shrink:0;}
+  .lyr .nm{flex:1;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .lyr .ic{cursor:pointer;color:var(--sub);}
+  .lyr .ic .ms{font-size:18px;}
+  .lyr.hidden{opacity:.45;}
+  .build-note{font-size:11px;color:var(--sub);line-height:1.5;margin-top:8px;border-top:1px solid var(--line);padding-top:10px;}
+
+  .settings{position:fixed;top:84px;right:8px;bottom:8px;width:320px;background:var(--panel);border:1px solid var(--line);z-index:620;transform:translateX(calc(100% + 8px));transition:transform .2s;display:flex;flex-direction:column;box-shadow:-8px 0 24px rgba(0,0,0,.4);}
+  .settings.show{transform:translateX(0);}
+  .settings h3{margin:0;padding:12px 14px;font-size:14px;font-weight:800;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
+  .settings h3 .ms{font-size:20px;color:var(--blue);}
+  .settings h3 .x{margin-left:auto;cursor:pointer;color:var(--sub);}
+  .settings h3 button.x{background:transparent;border:none;padding:0;font-size:20px;line-height:1;}
+  .setnote{font-size:11px;color:var(--sub);line-height:1.5;}
+  .fontgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;max-height:220px;overflow:auto;border:1px solid var(--line);background:var(--panel2);padding:6px;}
+  .fontgrid label{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text);font-weight:600;}
+  .settings-body{flex:1;overflow:auto;padding:12px 14px;display:grid;gap:12px;}
+  .setsec{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);font-weight:800;}
+  .setrow{display:grid;gap:6px;}
+  .setrow label{font-size:11px;color:var(--sub);font-weight:700;}
+  .setrow input[type="color"]{height:32px;border:1px solid var(--line);background:var(--panel2);width:100%;}
+  .setbtn2{height:32px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;font:700 12px 'Archivo',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;}
+
+  .clipart{position:fixed;top:84px;right:8px;bottom:8px;width:320px;background:var(--panel);border:1px solid var(--line);z-index:625;transform:translateX(calc(100% + 8px));transition:transform .2s;display:flex;flex-direction:column;box-shadow:-8px 0 24px rgba(0,0,0,.4);}
+  .clipart.show{transform:translateX(0);}
+  .clipart h3{margin:0;padding:12px 14px;font-size:14px;font-weight:800;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
+  .clipart h3 .ms{font-size:20px;color:var(--green);}
+  .clipart h3 .x{margin-left:auto;cursor:pointer;color:var(--sub);}
+  .clipart-body{flex:1;overflow:auto;padding:12px 14px;display:grid;grid-template-rows:auto 1fr auto;gap:10px;min-height:0;}
+  .clipart-controls{display:grid;gap:6px;}
+  .clipart-controls input{height:32px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:0 8px;font:600 12px 'Archivo',sans-serif;outline:none;}
+  .clipart-controls input:focus{border-color:var(--green);}
+  .clipart-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--sub);font:700 10px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase;}
+  .clipgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-content:start;overflow:auto;min-height:0;}
+  .clipbtn{border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;display:grid;grid-template-rows:58px auto auto;gap:4px;align-items:center;padding:6px 6px 7px;font:700 10px 'Archivo',sans-serif;text-align:center;}
+  .clipbtn:hover{border-color:var(--green);}
+  .clipbtn img{max-width:100%;max-height:56px;object-fit:contain;justify-self:center;pointer-events:none;}
+  .clipbtn .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+  .clipbtn .set{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sub);font-size:9px;letter-spacing:.04em;text-transform:uppercase;}
+  .clip-empty{grid-column:1/-1;border:1px dashed var(--line);background:var(--panel2);padding:12px;color:var(--sub);font:600 11px 'Archivo',sans-serif;line-height:1.4;}
+  .clipart-pager{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .clipart-pager button:disabled{opacity:.45;cursor:default;}
+
+  .ctx-menu{position:fixed;z-index:900;background:var(--panel);border:1px solid var(--line);box-shadow:0 12px 24px rgba(0,0,0,.4);display:none;min-width:180px;}
+  .ctx-menu.show{display:block;}
+  .ctx-menu button{width:100%;height:32px;background:transparent;border:none;border-bottom:1px solid var(--line);color:var(--text);text-align:left;padding:0 10px;font:700 11px 'Archivo',sans-serif;cursor:pointer;}
+  .ctx-menu button:last-child{border-bottom:none;}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  @keyframes mapWave{to{transform:translate(-50%,-50%) scale(5.2);opacity:0;}}
+
+  @media (max-width:980px){
+    .app{grid-template-columns:1fr;grid-template-rows:76px 1fr;}
+    .topbar{grid-column:1;grid-row:1;}
+    .radar{grid-column:1;grid-row:2;}
+    .info{grid-column:1;grid-row:2;position:absolute;right:7px;top:90px;bottom:7px;width:min(330px,42vw);z-index:490;}
+    .deck{grid-column:1;grid-row:2;}
+    .util{position:absolute;left:7px;top:90px;bottom:7px;width:250px;z-index:490;box-shadow:0 8px 16px rgba(0,0,0,.35);}
+    .settings{top:84px;right:7px;bottom:7px;}
+    .splitter{display:none;}
+    .topbar{overflow:auto;display:flex;}
+    .alerts-reopen{right:8px;top:90px;}
+    .draw-inline{max-width:100%;margin:0 6px;}
+    .top-right{margin-left:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="splitter v" id="splitL"></div>
+  <div class="splitter v" id="splitR"></div>
+  <div class="splitter h" id="splitB"></div>
+
+  <div class="topbar">
+    <div class="top-left">
+      <img id="logoLeft" class="toplogo" alt="Left logo">
+    </div>
+    <div class="draw-inline">
+      <div class="toolbtn" id="toolDraw"><span class="ms">draw</span><small>Draw</small></div>
+      <div class="toolbtn" id="toolText"><span class="ms">text_fields</span><small>Text</small></div>
+      <div class="tele-bar draw-off" id="teleBar">
+        <div class="tb on" data-tool="pen" data-tip="Freehand draw tool" data-tip-accent="var(--amber)"><span class="ms">gesture</span></div>
+        <div class="tb" data-tool="line" data-tip="Straight line tool" data-tip-accent="var(--amber)"><span class="ms">show_chart</span></div>
+        <div class="tb" data-tool="arrow" data-tip="Arrow tool — sketchy freeform stroke" data-tip-accent="var(--amber)"><span class="ms">north_east</span></div>
+        <div class="tb" data-tool="aarrow" data-tip="Animated arrow — pulses along the line to show motion" data-tip-accent="var(--amber)"><span class="ms">double_arrow</span></div>
+        <div class="tb" data-tool="circle" data-tip="Circle tool — drag out from the center" data-tip-accent="var(--amber)"><span class="ms">circle</span></div>
+        <div class="tb" data-tool="measure" data-tip="Measure tool — shows distance in miles" data-tip-accent="var(--amber)"><span class="ms">straighten</span></div>
+        <div class="tb" data-tool="coldfront" data-tip="Cold front symbol — blue triangles along the line" data-tip-accent="var(--amber)"><span class="ms">ac_unit</span></div>
+        <div class="tb" data-tool="warmfront" data-tip="Warm front symbol — red half-circles along the line" data-tip-accent="var(--amber)"><span class="ms">wb_sunny</span></div>
+        <div class="tb" data-tool="stationaryfront" data-tip="Stationary front — alternating blue triangles and red half-circles" data-tip-accent="var(--amber)"><span class="ms">swap_horiz</span></div>
+        <div class="tb" data-tool="dryline" data-tip="Dryline symbol — dashed line with scallops" data-tip-accent="var(--amber)"><span class="ms">water</span></div>
+        <div class="div"></div>
+        <div class="tb" id="toolClipart" data-tip="Open the clipart panel" data-tip-accent="var(--amber)"><span class="ms">image</span></div>
+        <div class="sw" id="teleColors" data-tip="Stroke color" data-tip-accent="var(--amber)"></div>
+        <div class="sw linew"><label for="teleWidth">Size</label><input id="teleWidth" type="range" min="2" max="12" step="1" value="4" data-tip="Adjust stroke width" data-tip-accent="var(--amber)"></div>
+        <div class="tb" id="drawShadowBtn" data-act="shadow" data-tip="Adjust drop-shadow behind telestrator strokes and text" data-tip-accent="var(--amber)"><span class="ms">contrast</span></div>
+        <div class="div"></div>
+        <div class="tb" data-act="undo" data-tip="Undo last stroke" data-tip-accent="var(--amber)"><span class="ms">undo</span></div>
+        <div class="tb" data-act="clear" data-tip="Clear all telestrator strokes" data-tip-accent="var(--amber)"><span class="ms">delete</span></div>
+      </div>
+    </div>
+    <div class="top-right">
+      <span class="stamp" id="tbStamp">-</span>
+      <div class="top-actions">
+        <button class="hidebtn" id="toolBuild">Overlay GFX</button>
+        <button class="hidebtn" id="hideUiBtn">Hide UI</button>
+        <button class="themebtn" id="themeBtn" data-tip="Switch between dark and light theme" data-tip-accent="var(--blue)"><span class="ms">dark_mode</span></button>
+        <button class="setbtn" id="openSettings" data-tip="Open app settings — logos, layers, hazards, palette" data-tip-accent="var(--blue)"><span class="ms">settings</span></button>
+      </div>
+      <img id="logoRight" class="toplogo hidden" alt="Right logo">
+    </div>
+  </div>
+
+  <div class="util">
+    <div class="clock">
+      <div class="times"><div class="livechip"><span class="dot"></span>Live</div><div class="lt"><span id="lt">-</span><span class="z" id="lz"></span></div><div class="ut" id="ut">-</div></div>
+    </div>
+    <div class="radsel">
+      <label for="radarSiteSelect">Radar Site</label>
+      <div class="radsel-tools">
+        <input id="radarSiteSearch" type="text" placeholder="Search radar sites" aria-label="Search radar sites">
+        <button class="iconbtn" id="radarTerminalToggle" type="button" aria-label="Toggle terminal radar filter" data-tip="Show/hide TDWR terminal radar sites in the site list" data-tip-accent="var(--blue)"><span class="ms">filter_alt</span></button>
+      </div>
+      <select id="radarSiteSelect"><option value="KOAX">KOAX - Omaha/Valley</option></select>
+    </div>
+    <div class="favsec">
+      <div class="hd"><span>Favorites</span></div>
+      <div class="favgrid" id="favGrid"></div>
+    </div>
+    <div class="tilt-wrap">
+      <div class="lbl">Tilt</div>
+      <div class="tilt-row" id="tiltRow">
+        <button class="tilt-btn on" data-tilt="0.5" type="button">0.5°</button>
+        <button class="tilt-btn" data-tilt="1.5" type="button">1.5°</button>
+        <button class="tilt-btn" data-tilt="2.4" type="button">2.4°</button>
+        <button class="tilt-btn" data-tilt="3.4" type="button">3.4°</button>
+      </div>
+    </div>
+    <div class="geoedit">
+      <div class="lbl">Map Position</div>
+      <div class="geo-mini">
+        <div class="georow georow-latlon"><label for="centerLat">Lat/Lon</label><input id="centerLat" type="text" value="41.3203"><input id="centerLon" type="text" value="-96.3667"></div>
+        <div class="zoom-inline">
+          <div class="georow"><label for="zoomLevel">Zoom</label><input id="zoomLevel" type="text" value="8.00"></div>
+          <div class="zoom"><button class="zb" id="zin" data-tip="Zoom in" data-tip-accent="var(--blue)">+</button><button class="zb" id="zout" data-tip="Zoom out" data-tip-accent="var(--blue)">-</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="grp loop"><div class="glabel">Loop</div>
+      <div class="keys">
+        <div class="loop-head">Loop</div>
+        <div class="key sm loop" id="btnPrev" data-tip="Step back one radar frame" data-tip-accent="var(--amber)"><span class="ms">skip_previous</span>Prev</div>
+        <div class="key sm loop on" id="btnPlay" data-tip="Play/pause the radar loop" data-tip-accent="var(--amber)"><span class="ms">play_arrow</span>Play</div>
+        <div class="key sm loop" id="btnNext" data-tip="Step forward one radar frame" data-tip-accent="var(--amber)"><span class="ms">skip_next</span>Next</div>
+        <div class="key sm loop" id="btnStop" data-tip="Jump to the live, most recent frame" data-tip-accent="var(--amber)"><span class="ms">stop</span>Live</div>
+        <div class="key sm loop" id="btnRock" data-tip="Rock mode — loop bounces forward and back" data-tip-accent="var(--amber)"><span class="ms">sync_alt</span>Rock</div>
+        <div class="key sm loop" id="btnSpeed" data-tip="Cycle loop playback speed" data-tip-accent="var(--amber)"><span class="ms">speed</span><span id="speedLbl">1.0x</span></div>
+        <div class="timeline-wrap">
+          <div class="timeline-title"><span class="fc" id="fc">- / -</span></div>
+          <div class="loop-frames">Frames<select id="loopFrameCount"><option value="20">20</option><option value="30">30</option><option value="40" selected>40</option><option value="50">50</option><option value="60">60</option></select></div>
+          <div class="track" id="track"><div class="ticks" id="ticks"></div><div class="fill" id="fill"></div><div class="knob" id="knob"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="util-tools"></div>
+    <div class="toolstrip" id="toolStrip"></div>
+  </div>
+
+  <div class="radar">
+    <div id="map"></div>
+    <div class="map-wave-layer" id="mapWaveLayer"></div>
+    <canvas class="tele" id="tele"></canvas>
+    <div class="nearest-pop" id="nearestPop"></div>
+    <div class="gfx-layer" id="gfxLayer"></div>
+  </div>
+
+  <div class="info">
+    <div class="info-head">
+      <span class="ttl">Alerts & Reports</span>
+      <button class="phead-btn" id="toggleInfoFrame" type="button" aria-expanded="true" aria-label="Hide Alerts and Reports" data-tip="Collapse the Alerts & Reports panel" data-tip-accent="var(--blue)"><span class="ms">chevron_right</span></button>
+    </div>
+    <div class="info-stack" id="infoStack">
+    <div class="pbox warnbox">
+      <div class="phead"><div class="phead-title"><span class="dot"></span>Warnings</div><div class="pflt"><select id="warnTypeFilter"><option value="all">All</option><option value="tornado">Tornado</option><option value="severe thunderstorm">Severe T-Storm</option><option value="flood">Flood</option></select><button class="sortbtn" id="warnRangeBtn" type="button">Nearby</button></div><button class="phead-btn minimize" type="button" aria-expanded="true" aria-label="Minimize Warnings" data-tip="Collapse the Warnings list" data-tip-accent="var(--blue)"><span class="ms">minimize</span></button></div>
+      <div class="pbody" id="warnList"><div class="lsr-l">Loading warnings...</div></div>
+    </div>
+    <div class="vsplit" id="vsplitWarn"></div>
+    <div class="pbox watchbox">
+      <div class="phead"><div class="phead-title"><span class="dot" style="background:var(--amber)"></span>Watches</div><div class="pflt"><select id="watchTypeFilter"><option value="all">All</option><option value="tornado">Tornado</option><option value="severe thunderstorm">Severe T-Storm</option></select><button class="sortbtn" id="watchRangeBtn" type="button">Nearby</button></div><button class="phead-btn minimize" type="button" aria-expanded="true" aria-label="Minimize Watches" data-tip="Collapse the Watches list" data-tip-accent="var(--blue)"><span class="ms">minimize</span></button></div>
+      <div class="pbody" id="watchList"><div class="lsr-l">Loading watches...</div></div>
+    </div>
+    <div class="vsplit" id="vsplitWatch"></div>
+    <div class="pbox repbox">
+      <div class="phead"><div class="phead-title"><span class="dot" style="background:var(--amber)"></span>Reports</div><div class="pflt"><select id="reportTypeFilter"><option value="severe">All Severe</option><option value="all">All</option><option value="tornado">Tornado</option><option value="wind">Wind</option><option value="hail">Hail</option><option value="cocorahs">CoCoRaHS</option><option value="other">Other</option></select><button class="sortbtn" id="reportRangeBtn" type="button">Nearby</button></div><button class="phead-btn minimize" type="button" aria-expanded="true" aria-label="Minimize Reports" data-tip="Collapse the Reports list" data-tip-accent="var(--blue)"><span class="ms">minimize</span></button></div>
+      <div class="pbody" id="reportList"><div class="lsr-l">Loading storm reports...</div></div>
+    </div>
+    </div>
+  </div>
+
+  <div class="deck">
+    <div class="deck-rows">
+      <div class="row">
+        <div class="grp product"><div class="glabel">Product</div><div class="keys">
+          <div class="key product on" data-prod="Base Reflectivity" data-tip="Base Reflectivity" data-tip-accent="var(--blue)"><span class="ms">radar</span><center>Base Reflec</center></div>
+          <div class="key product" data-prod="Base Velocity" data-tip="Base Velocity" data-tip-accent="var(--blue)"><span class="ms">cycle</span><center>Base Veloc</center></div>
+          <div class="key product" data-prod="Storm-Relative Velocity" data-tip="Storm-Relative Velocity"    data-tip-accent="var(--blue)"><span class="ms">cloud_sync</span><center>SR Veloc</center></div>
+          <div class="key product" data-prod="Correlation Coefficient" data-tip="Correlation Coefficient"    data-tip-accent="var(--blue)"><span class="ms">lens_blur</span><center></center>Corr Coeff</center></div>
+          <div class="key product" data-prod="Composite Reflectivity" data-tip="Composite Reflectivity"     data-tip-accent="var(--blue)"><span class="ms">stacks</span><center>Comp Reflec</center></div>
+          <div class="key product" data-prod="Differential Reflectivity (ZDR)" data-tip="Differential Reflectivity (ZDR)" data-tip-accent="var(--blue)"><span class="ms">bubble_chart</span><center>Diff Reflec</center></div>
+          <div class="key product" data-prod="Spectrum Width" data-tip="Spectrum Width" data-tip-accent="var(--blue)"><span class="ms">airwave</span><center>Spec Width</center></div>
+          <div class="key product" data-prod="Vertically Integrated Liquid (VIL)" data-tip="Vertically Integrated Liquid (VIL)" data-tip-accent="var(--blue)"><span class="ms">cool_to_dry</span><center>VIL</center></div>
+          <div class="key product" data-prod="Echo Tops" data-tip="Echo Tops" data-tip-accent="var(--blue)"><span class="ms">cloud_upload</span><center>Echo Tops</center></div>
+          <div class="key product" data-prod="Precipitation Accumulation" data-tip="Precipitation Accumulation" data-tip-accent="var(--blue)"><span class="ms">water</span><center>1-Hr Precip</center></div>
+        </div></div>
+        <div class="grp layer"><div class="glabel">Layers</div><div class="keys">
+ 	        <div class="key layer on" id="btnWarnLayer"   data-tip="Show/hide radar overlay" data-tip-accent="var(--green)"><span class="ms">cell_tower</span>Warn</div>
+          <div class="key layer on" id="btnCountyLayer" data-tip="Show/hide active NWS warning polygons on the radar" data-tip-accent="var(--green)"><span class="ms">warning</span>Warnings</div>
+          <div class="key layer on" id="btnRoadLayer"   data-tip="Show/hide active NWS watch polygons on the radar" data-tip-accent="var(--green)"><span class="ms">error</span>Watches</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide storm reports" data-tip-accent="var(--green)"><span class="ms">maps_ugc</span>Reports</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide mesoscale discussions" data-tip-accent="var(--green)"><span class="ms">chat</span>Discussions</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide city names" data-tip-accent="var(--green)"><span class="ms">location_city</span>Cities</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide roadways" data-tip-accent="var(--green)"><span class="ms">road</span>Roads</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide state borders" data-tip-accent="var(--green)"><span class="ms">border_top</span>States</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide county borders" data-tip-accent="var(--green)"><span class="ms">border_bottom</span>Counties</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide NWS county watch areas (CWAs)" data-tip-accent="var(--green)"><span class="ms">activity_zone</span>CWAs</div>
+        </div></div>
+        <div class="grp views"><div class="glabel">Views</div><div class="keys">
+          <div class="key views on" data-tip="Saved map view 1 — click to jump, right-click to set/rename" data-tip-accent="var(--purple)"><span class="g">1</span>V1</div>
+          <div class="key views" data-tip="Saved map view 2 — click to jump, right-click to set/rename" data-tip-accent="var(--purple)"><span class="g">2</span>V2</div>
+          <div class="key views" data-tip="Saved map view 3 — click to jump, right-click to set/rename" data-tip-accent="var(--purple)"><span class="g">3</span>V3</div>
+          <div class="key views" data-tip="Saved map view 4 — click to jump, right-click to set/rename" data-tip-accent="var(--purple)"><span class="g">4</span>V4</div>
+        </div></div>
+        <div class="grp broadcast"><div class="glabel">Broadcast</div><div class="keys">
+          <div class="key broadcast" id="bcastBtn"            data-tip="Open the broadcast output window for OBS/Streamlabs capture"  data-tip-accent="var(--red)"> <span class="ms">cast       </span>Open</div>
+          <div class="key broadcast" id="bcastFullscreenBtn"  data-tip="Fullscreen the broadcast output window"                       data-tip-accent="var(--red)"> <span class="ms">fullscreen </span>Fullscreen</div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  <button class="alerts-reopen" id="showAlertsBtn" aria-label="Restore Alerts and Reports" data-tip="Restore the Alerts & Reports panel" data-tip-accent="var(--blue)"><span class="ms">keyboard_double_arrow_left</span></button>
+</div>
+
+<div class="build" id="buildPanel">
+  <h3><span class="ms">layers</span>Overlay GFX<span class="ms x" id="buildClose">close</span></h3>
+  <div class="build-body">
+    <div class="build-sec">Always-On Graphics</div>
+    <button class="addbtn" id="addGfx"><span class="ms">add_photo_alternate</span>Add PNG Layer</button>
+    <div id="layerList"></div>
+    <div class="build-note">Pin a layer to keep it always on screen. Eye hides it, trash removes it. Click a layer to select it, then drag/resize/rotate on radar.</div>
+  </div>
+</div>
+
+<div class="settings" id="settingsPanel">
+  <h3><span class="ms">settings</span><span id="settingsTitle">Settings</span><button class="ms x" id="settingsAboutBack" style="display:none" data-tip="Back to Settings" data-tip-accent="var(--blue)">arrow_back</button><span class="ms x" id="settingsClose">close</span></h3>
+  <div class="settings-body" id="settingsBody">
+    <div class="setsec">Logos</div>
+    <div class="setrow">
+      <label>Upper Left Logo</label>
+      <div>Auto from Program Graphics (theme aware)</div>
+    </div>
+    <div class="setrow">
+      <label>Upper Right Logo</label>
+      <button class="setbtn2" id="setLogoRightBtn"><span class="ms">upload</span>Upload Right Logo</button>
+      <button class="setbtn2" id="clearLogoRightBtn">Clear Right Logo</button>
+    </div>
+
+    <div class="setsec">Basemap</div>
+    <div class="setrow">
+      <div class="setnote">Using Esri World Terrain Base (key-free). Clean terrain + water only — <strong>no county lines, roads, or labels</strong> in the basemap. All boundaries and labels come from your toggleable overlays (Counties, States, Roads, Cities). This matches the clean professional look of WeatherWise / SweepWx.</div>
+    </div>
+
+    <div class="setsec">Fonts (Google)</div>
+    <div class="setrow">
+      <div class="setnote">Select fonts to make available in the on-canvas text tool.</div>
+      <div class="fontgrid" id="fontGrid"></div>
+    </div>
+
+    <div class="setsec">Radar Palette</div>
+    <div class="setrow">
+      <label for="radarPalette">Display Palette</label>
+      <select id="radarPalette">
+        <option value="grx">GRLevelX Classic</option>
+        <option value="vivid">GRLevelX Vivid</option>
+        <option value="wsi">WSI Style</option>
+        <option value="noc">NWS N0Q Neutral</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div class="setrow"><label for="palHue">Hue</label><input id="palHue" type="range" min="-180" max="180" value="0"></div>
+    <div class="setrow"><label for="palSat">Saturation</label><input id="palSat" type="range" min="0.5" max="2" step="0.05" value="1"></div>
+    <div class="setrow"><label for="palCon">Contrast</label><input id="palCon" type="range" min="0.5" max="2" step="0.05" value="1"></div>
+    <div class="setrow"><label for="palBri">Brightness</label><input id="palBri" type="range" min="0.5" max="2" step="0.05" value="1"></div>
+    <div class="setrow"><label for="radarOpacity">Radar Opacity</label><input id="radarOpacity" type="range" min="0.2" max="1" step="0.05" value="0.85"></div>
+
+    <div class="setsec">Map Layers</div>
+    <div class="setrow"><label><input type="checkbox" id="lyRoads" checked> Roadways</label></div>
+    <div class="setrow"><label><input type="checkbox" id="lyCounties" checked> Counties</label></div>
+    <div class="setrow"><label><input type="checkbox" id="lyStates" checked> States</label></div>
+    <div class="setrow"><label><input type="checkbox" id="lyCities" checked> Cities</label></div>
+    <div class="setrow"><label><input type="checkbox" id="lyWarnings" checked> Warnings</label></div>
+    <div class="setrow"><label><input type="checkbox" id="lyWatches" checked> Watches</label></div>
+
+    <div class="setsec">Hazard Colors</div>
+    <div class="setrow"><label for="colTor">Tornado Warning</label><input id="colTor" type="color" value="#ff4d42"></div>
+    <div class="setrow"><label for="colStw">Severe Thunderstorm Warning</label><input id="colStw" type="color" value="#ff9f43"></div>
+    <div class="setrow"><label for="colFloodWatch">Flood Watch</label><input id="colFloodWatch" type="color" value="#5a9bf0"></div>
+    <div class="setrow"><label for="colStmWatch">Severe Thunderstorm Watch</label><input id="colStmWatch" type="color" value="#f0cc4c"></div>
+
+    <div class="setsec">About</div>
+    <div class="setrow"><button class="setbtn2" id="settingsAboutBtn"><span class="ms">info</span>About StormCast</button></div>
+  </div>
+  <div class="settings-body" id="aboutBody" style="display:none">
+    <div class="setsec">About StormCast</div>
+    <div class="setrow">
+      <div class="setnote">StormCast is a broadcast-style live weather radar tool. [Placeholder — edit this copy to describe your setup, credits, and contact info.]</div>
+    </div>
+    <div class="setsec">Version</div>
+    <div class="setrow"><div class="setnote">v0.11 [Placeholder — edit as needed.]</div></div>
+    <div class="setsec">Credits</div>
+    <div class="setrow"><div class="setnote">Radar and warnings data courtesy of the Iowa Environmental Mesonet (IEM) and NOAA/NWS. Basemap: Esri World Terrain Base (key-free, clean terrain/water only). [Placeholder — edit as needed.]</div></div>
+  </div>
+</div>
+
+<div class="clipart" id="clipartPanel">
+
+  <h3><span class="ms">image</span>Clipart<span class="ms x" id="clipartClose">close</span></h3>
+  <div class="clipart-body">
+    <div class="clipart-controls">
+      <input id="clipartSearch" type="text" placeholder="Search weather icons" aria-label="Search clipart">
+      <div class="clipart-meta"><span id="clipartCount">0 icons</span><span id="clipartPageLabel">Page 1 / 1</span></div>
+    </div>
+    <div class="clipgrid" id="clipartGrid"></div>
+    <div class="clipart-pager">
+      <button class="setbtn2" id="clipartPrevPage" type="button"><span class="ms">navigate_before</span>Prev</button>
+      <button class="setbtn2" id="clipartNextPage" type="button">Next<span class="ms">navigate_next</span></button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="gfxFile" accept="image/png,image/*" style="display:none">
+<input type="file" id="logoRightFile" accept="image/png,image/*" style="display:none">
+<div class="ui-tip" id="uiTip">UI hidden. Press Escape to restore controls.</div>
+<div class="ctx-menu" id="favMenu"></div>
+<div class="ctx-menu" id="viewMenu"></div>
+<div class="ctx-menu" id="gfxMenu"></div>
+<div class="draw-shadow-pop" id="drawShadowPop">
+  <div class="hd">Line Shadow<span class="ms x" id="drawShadowClose">close</span></div>
+  <div class="rw"><label><input id="drawShadowEnable" type="checkbox"> Enabled</label><span></span></div>
+  <div class="rw"><label for="drawShadowColor">Color</label><input id="drawShadowColor" type="color" value="#000000"></div>
+  <div class="rw"><label for="drawShadowBlur">Blur</label><input id="drawShadowBlur" type="range" min="0" max="20" step="1" value="8"></div>
+  <div class="rw"><label for="drawShadowOpacity">Opacity</label><input id="drawShadowOpacity" type="range" min="0" max="1" step="0.05" value="0.65"></div>
+  <div class="rw"><label for="drawShadowOffsetY">Offset Y</label><input id="drawShadowOffsetY" type="range" min="-12" max="12" step="1" value="2"></div>
+</div>
+
+<script src="./stormcast_wsi_clipart_manifest.js"></script>
+<script>
+(function(){
+  const SITE=[41.3203,-96.3667];
+
+  // Safe localStorage wrapper (must be defined FIRST to avoid TDZ/ReferenceError in sandboxed environments)
+  const safeStorage = {
+    getItem(key) { try { return localStorage.getItem(key); } catch(e) { return null; } },
+    setItem(key, value) { try { localStorage.setItem(key, value); } catch(e) { /* sandbox or private mode */ } },
+    removeItem(key) { try { localStorage.removeItem(key); } catch(e) {} }
+  };
+
+  const GOOGLE_FONTS_CURATED=['Oswald','Bebas Neue','Anton','Roboto Condensed','Barlow Condensed','Teko','Archivo Black','Inter','Roboto','Open Sans','Montserrat','Poppins','Raleway','Rajdhani','Orbitron','Exo 2','Saira Condensed','Fjalla One','Big Shoulders Display','Titillium Web','Play','Russo One','Staatliches','Khand','PT Sans Narrow','Ubuntu Condensed','Yanone Kaffeesatz','Chakra Petch','Kanit','Josefin Sans'];
+  let activeGoogleFonts=new Set();
+  try{activeGoogleFonts=new Set(JSON.parse(safeStorage.getItem('stormcast.googleFonts')||'[]'));}catch{}
+  const loadedGoogleFontLinks=new Set();
+  function loadGoogleFont(name){
+    if(loadedGoogleFontLinks.has(name))return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(name).replace(/%20/g,'+')+':wght@400;700;800&display=swap';
+    document.head.appendChild(link);
+    loadedGoogleFontLinks.add(name);
+  }
+  function toggleGoogleFont(name,on){
+    if(on){activeGoogleFonts.add(name);loadGoogleFont(name);}
+    else activeGoogleFonts.delete(name);
+    safeStorage.setItem('stormcast.googleFonts',JSON.stringify([...activeGoogleFonts]));
+  }
+  activeGoogleFonts.forEach((f)=>loadGoogleFont(f));
+  let currentRid='KOAX';
+  let currentProduct='N0Q';
+  const radarSiteSelect=document.getElementById('radarSiteSelect');
+  const radarSiteSearch=document.getElementById('radarSiteSearch');
+  const radarTerminalToggle=document.getElementById('radarTerminalToggle');
+  const radarSites=new Map();
+  const fill=document.getElementById('fill'),knob=document.getElementById('knob');
+  const uiTip=document.getElementById('uiTip');
+  let uiTipTimer=0;
+  const warnList=document.getElementById('warnList');
+  const watchList=document.getElementById('watchList');
+  const reportList=document.getElementById('reportList');
+  const warnTypeFilter=document.getElementById('warnTypeFilter');
+  const watchTypeFilter=document.getElementById('watchTypeFilter');
+  const reportTypeFilter=document.getElementById('reportTypeFilter');
+  const warnRangeBtn=document.getElementById('warnRangeBtn');
+  const watchRangeBtn=document.getElementById('watchRangeBtn');
+  const reportRangeBtn=document.getElementById('reportRangeBtn');
+  const nearestPop=document.getElementById('nearestPop');
+  const favGrid=document.getElementById('favGrid');
+  const favMenu=document.getElementById('favMenu');
+  const viewMenu=document.getElementById('viewMenu');
+  const gfxMenu=document.getElementById('gfxMenu');
+  let gfxMenuTargetId=null;
+  let favorites=Array.from({length:6},()=>null);
+  let homeRid='';
+  const LEFT_LOGO_DARK='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANwAAAA6CAYAAADbRzceAAAEq2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS41LjAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIKICAgIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIKICAgIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIgogICAgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIKICAgdGlmZjpJbWFnZUxlbmd0aD0iNTgiCiAgIHRpZmY6SW1hZ2VXaWR0aD0iMjIwIgogICB0aWZmOlJlc29sdXRpb25Vbml0PSIyIgogICB0aWZmOlhSZXNvbHV0aW9uPSI5Ni8xIgogICB0aWZmOllSZXNvbHV0aW9uPSI5Ni8xIgogICBleGlmOlBpeGVsWERpbWVuc2lvbj0iMjIwIgogICBleGlmOlBpeGVsWURpbWVuc2lvbj0iNTgiCiAgIGV4aWY6Q29sb3JTcGFjZT0iMSIKICAgcGhvdG9zaG9wOkNvbG9yTW9kZT0iMyIKICAgcGhvdG9zaG9wOklDQ1Byb2ZpbGU9InNSR0IgSUVDNjE5NjYtMi4xIgogICB4bXA6TW9kaWZ5RGF0ZT0iMjAyNi0w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';
+  const LEFT_LOGO_LIGHT='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANwAAAA6CAYAAADbRzceAAAEq2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS41LjAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIKICAgIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIKICAgIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIgogICAgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIKICAgdGlmZjpJbWFnZUxlbmd0aD0iNTgiCiAgIHRpZmY6SW1hZ2VXaWR0aD0iMjIwIgogICB0aWZmOlJlc29sdXRpb25Vbml0PSIyIgogICB0aWZmOlhSZXNvbHV0aW9uPSI5Ni8xIgogICB0aWZmOllSZXNvbHV0aW9uPSI5Ni8xIgogICBleGlmOlBpeGVsWERpbWVuc2lvbj0iMjIwIgogICBleGlmOlBpeGVsWURpbWVuc2lvbj0iNTgiCiAgIGV4aWY6Q29sb3JTcGFjZT0iMSIKICAgcGhvdG9zaG9wOkNvbG9yTW9kZT0iMyIKICAgcGhvdG9zaG9wOklDQ1Byb2ZpbGU9InNSR0IgSUVDNjE5NjYtMi4xIgogICB4bXA6TW9kaWZ5RGF0ZT0iMjAyNi0w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';
+  let rawWarnings=[];
+  let rawWatches=[];
+  let rawReports=[];
+  let currentRadarTz='America/Chicago';
+  const userTz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
+  let selectedTilt='0.5';
+  let selectedProdName='Reflectivity';
+  let warnRangeMode='nearby';
+  let watchRangeMode='nearby';
+  let reportRangeMode='nearby';
+  let hideTerminalRadars=safeStorage.getItem('stormcast.hideTerminalRadars')==='1';
+
+  function estimateTimeZoneFromLon(lon){
+    if(lon<=-112)return 'America/Los_Angeles';
+    if(lon<=-97)return 'America/Denver';
+    if(lon<=-82)return 'America/Chicago';
+    return 'America/New_York';
+  }
+
+  function smoothTravelTo(lat,lon,zoom){
+    map.flyTo([lat,lon],zoom,{animate:true,duration:1.2,easeLinearity:0.2,noMoveStart:false});
+  }
+
+  function smoothTravelToBounds(bounds){
+    map.flyToBounds(bounds,{animate:true,duration:1.25,padding:[42,42]});
+  }
+
+  function featureBounds(feature){
+    const g=feature&&feature.geometry;
+    if(!g)return null;
+    const pts=[];
+    const dig=(arr)=>{if(!Array.isArray(arr))return;if(typeof arr[0]==='number')pts.push([Number(arr[1]),Number(arr[0])]);else arr.forEach(dig);};
+    if(g.type==='Point'&&Array.isArray(g.coordinates))return L.latLngBounds([[Number(g.coordinates[1]),Number(g.coordinates[0])],[Number(g.coordinates[1]),Number(g.coordinates[0])]]);
+    dig(g.coordinates);
+    if(!pts.length)return null;
+    return L.latLngBounds(pts);
+  }
+
+  // Key-free clean professional basemap (Esri World Terrain Base)
+  // No county lines, roads, or labels in the base layer — all boundaries come from your toggleable overlays
+  // This gives the clean "WeatherWise / SweepWx" style canvas you want
+  function mkBase(darkMode){
+    // Esri World Terrain Base — terrain + water only, no admin boundaries, key-free
+    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 18,
+      minZoom: 3,
+      opacity: 1,
+      attribution: 'Terrain: Esri, USGS, NOAA'
+    });
+  }
+
+  const map=L.map('map',{zoomControl:false,attributionControl:false,zoomSnap:.25,maxZoom:18,minZoom:3,preferCanvas:true});
+  const radarSiteLayer=L.layerGroup().addTo(map);
+  const latInput=document.getElementById('centerLat');
+  const lonInput=document.getElementById('centerLon');
+  const zoomInput=document.getElementById('zoomLevel');
+
+  const savedViewRaw=safeStorage.getItem('stormcast.mapView');
+  const savedView=savedViewRaw?JSON.parse(savedViewRaw):null;
+  const initialCenter=savedView&&Number.isFinite(savedView.lat)&&Number.isFinite(savedView.lon)?[savedView.lat,savedView.lon]:SITE;
+  const initialZoom=savedView&&Number.isFinite(savedView.z)?savedView.z:8;
+  map.setView(initialCenter,initialZoom);
+  let theme=document.documentElement.dataset.theme;
+  let dark=mkBase(true),light=mkBase(false),base=(theme==='light'?light:dark).addTo(map);
+
+  // Version / basemap confirmation (check browser console)
+  console.log('%c[StormCast v0.17] Clean Esri World Terrain Base active — no baked county/road boundaries in base layer', 'color:#52c074; font-weight:600');
+
+  function rebuildBaseLayers(){
+    const wasLight=map.hasLayer(light);
+    map.removeLayer(dark);map.removeLayer(light);
+    dark=mkBase(true);light=mkBase(false);
+    base=(wasLight?light:dark).addTo(map);
+  }
+  L.circleMarker(SITE,{radius:3,color:'#fff',weight:2,fillColor:'#5a9bf0',fillOpacity:1}).addTo(map);
+
+  const overlayRoads=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',opacity:0.35,maxZoom:18});
+  const overlayCounties=L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/uscounties/{z}/{x}/{y}.png',{opacity:0.75,maxZoom:18});
+  const overlayStates=L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/usstates/{z}/{x}/{y}.png',{opacity:0.8,maxZoom:18});
+  const overlayCities=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',opacity:0.22,maxZoom:18});
+  const overlayWarnGeo=L.geoJSON(null,{style:{color:'#ff9f43',weight:2,fillOpacity:0.12}});
+  const overlayWatchGeo=L.geoJSON(null,{style:{color:'#5a9bf0',weight:2,fillOpacity:0.1}});
+
+  function toggleLayer(layer,on){if(on){if(!map.hasLayer(layer))layer.addTo(map);}else if(map.hasLayer(layer))map.removeLayer(layer);}
+  toggleLayer(overlayRoads,false);
+  toggleLayer(overlayCounties,true);
+  toggleLayer(overlayStates,true);
+  toggleLayer(overlayCities,true);
+  toggleLayer(overlayWarnGeo,true);
+  toggleLayer(overlayWatchGeo,true);
+
+  function parseHazard(eventText){
+    const e=String(eventText||'').toLowerCase();
+    if(e.includes('tornado warning'))return 'tor';
+    if(e.includes('severe thunderstorm warning'))return 'stw';
+    if(e.includes('flood watch'))return 'flood-watch';
+    if(e.includes('severe thunderstorm watch'))return 'stm-watch';
+    return 'stw';
+  }
+
+  function tzShortName(tz,date){
+    try{
+      const p=new Intl.DateTimeFormat('en-US',{timeZone:tz,timeZoneName:'short'}).formatToParts(date);
+      return (p.find((x)=>x.type==='timeZoneName')||{}).value||tz;
+    }catch{return tz;}
+  }
+
+  function fmtTzTime(date,tz){
+    try{return new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit'}).format(date);}catch{return date.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+  }
+
+  function fmtUntil(expires){
+    if(!expires)return 'No expiration listed';
+    const d=new Date(expires);
+    if(Number.isNaN(d.getTime()))return 'No expiration listed';
+    const radarTime=fmtTzTime(d,currentRadarTz);
+    const radarZone=tzShortName(currentRadarTz,d);
+    const userTime=fmtTzTime(d,userTz);
+    const userZone=tzShortName(userTz,d);
+    return 'until '+radarTime+' '+radarZone+' • '+userTime+' '+userZone;
+  }
+
+  function titleCaseWords(s){
+    return String(s||'').split(/\s+/).filter(Boolean).map((w)=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  }
+
+  function compactAlertTitle(eventText){
+    const t=String(eventText||'').toLowerCase()
+      .replace(/thunderstorm/g,'t-storm')
+      .replace(/\bwarning\b/g,'')
+      .replace(/\bwatch\b/g,'')
+      .replace(/\s+/g,' ')
+      .trim();
+    return titleCaseWords(t||'alert');
+  }
+
+  function inRangeByMode(lat,lon,mode){
+    if(mode==='all')return true;
+    const c=map.getCenter();
+    const miles=distanceKm(c.lat,c.lng,Number(lat||0),Number(lon||0))*0.621371;
+    if(mode==='regional')return miles<=600;
+    return miles<=300;
+  }
+
+  function cycleRangeMode(mode){
+    if(mode==='nearby')return 'regional';
+    if(mode==='regional')return 'all';
+    return 'nearby';
+  }
+
+  function labelForRangeMode(mode){
+    if(mode==='regional')return 'Regional';
+    if(mode==='all')return 'All';
+    return 'Nearby';
+  }
+
+  function renderRangeButtons(){
+    const paint=(btn,mode)=>{
+      if(!btn)return;
+      btn.innerHTML='<span>'+labelForRangeMode(mode)+'</span><span class="ms ico" aria-hidden="true">sync_alt</span>';
+      btn.title='Switch range mode';
+    };
+    paint(warnRangeBtn,warnRangeMode);
+    paint(watchRangeBtn,watchRangeMode);
+    paint(reportRangeBtn,reportRangeMode);
+  }
+
+  function cardAlert(a){
+    const lat=Number(a.lat||0),lon=Number(a.lon||0);
+    const hazard=parseHazard(a.event);
+    const b=a.bounds||{};
+    return '<div class="alert" data-hazard="'+hazard+'" data-lat="'+lat+'" data-lon="'+lon+'" data-minlat="'+Number(b.minLat||lat)+'" data-minlon="'+Number(b.minLon||lon)+'" data-maxlat="'+Number(b.maxLat||lat)+'" data-maxlon="'+Number(b.maxLon||lon)+'"><div class="alert-text"><b>'+compactAlertTitle(a.event)+'</b><span>'+a.area+' - '+fmtUntil(a.expires)+'</span></div><button class="pinpoint-btn" type="button" aria-label="Go to alert location"><span class="ms">place</span></button></div>';
+  }
+
+  function cardReport(r){
+    const lat=Number(r.lat||0),lon=Number(r.lon||0);
+    return '<div class="lsr" data-lat="'+lat+'" data-lon="'+lon+'"><div class="lsr-main"><div class="lsr-top"><span class="lsr-t">'+r.time+'</span><span class="lsr-e"><span class="ms report-icon">'+r.icon+'</span>'+r.type+'</span><span class="lsr-m">'+r.mag+'</span></div><div class="lsr-l">'+r.place+'</div></div><button class="pinpoint-btn" type="button" aria-label="Go to report location"><span class="ms">place</span></button></div>';
+  }
+
+  function renderAlertLists(){
+    const wf=(warnTypeFilter&&warnTypeFilter.value)||'all';
+    const xf=(watchTypeFilter&&watchTypeFilter.value)||'all';
+    const warns=rawWarnings.filter((r)=>(wf==='all'||String(r.event||'').toLowerCase().includes(wf))&&inRangeByMode(r.lat,r.lon,warnRangeMode));
+    const watches=rawWatches.filter((r)=>(xf==='all'||String(r.event||'').toLowerCase().includes(xf))&&inRangeByMode(r.lat,r.lon,watchRangeMode));
+    warnList.innerHTML=warns.length?warns.slice(0,12).map(cardAlert).join(''):'<div class="lsr-l">No active warnings.</div>';
+    watchList.innerHTML=watches.length?watches.slice(0,12).map(cardAlert).join(''):'<div class="lsr-l">No active watches.</div>';
+  }
+
+  function renderReportList(){
+    const rf=(reportTypeFilter&&reportTypeFilter.value)||'all';
+    const data=rawReports.filter((r)=>{
+      const t=String(r.type||'').toLowerCase();
+      const s=String(r.source||'').toLowerCase();
+      const sev=String(r.severeType||'');
+      if(rf==='severe')return sev==='tornado'||sev==='wind'||sev==='hail';
+      if(rf==='all')return true;
+      if(rf==='tornado')return sev==='tornado';
+      if(rf==='wind')return sev==='wind';
+      if(rf==='hail')return sev==='hail';
+      if(rf==='cocorahs')return s.includes('cocorahs');
+      if(rf==='other')return !sev;
+      return true;
+    }).filter((r)=>inRangeByMode(r.lat,r.lon,reportRangeMode));
+    reportList.innerHTML=data.length?data.slice(0,30).map(cardReport).join(''):'<div class="lsr-l">No recent storm reports.</div>';
+  }
+
+  function centerOfFeature(f){
+    const g=f&&f.geometry;
+    if(!g)return null;
+    if(g.type==='Point'&&Array.isArray(g.coordinates))return {lon:Number(g.coordinates[0]),lat:Number(g.coordinates[1])};
+    const out=[];
+    const dig=(arr)=>{if(!Array.isArray(arr))return;if(typeof arr[0]==='number')out.push(arr);else arr.forEach(dig);};
+    dig(g.coordinates);
+    if(!out.length)return null;
+    let sx=0,sy=0;
+    out.forEach((xy)=>{sx+=Number(xy[0]||0);sy+=Number(xy[1]||0);});
+    return {lon:sx/out.length,lat:sy/out.length};
+  }
+
+  async function refreshAlertPolygons(){
+    const toItem=(f)=>{
+      const p=f&&f.properties?f.properties:{};
+      const c=centerOfFeature(f);
+      const b=featureBounds(f);
+      return {
+        event:String(p.event||'Alert'),
+        area:String(p.areaDesc||p.senderName||'Area').split(';')[0].trim(),
+        expires:p.expires||p.ends||'',
+        lat:Number(c&&c.lat||0),
+        lon:Number(c&&c.lon||0),
+        bounds:b?{minLat:b.getSouth(),minLon:b.getWest(),maxLat:b.getNorth(),maxLon:b.getEast()}:{minLat:Number(c&&c.lat||0),minLon:Number(c&&c.lon||0),maxLat:Number(c&&c.lat||0),maxLon:Number(c&&c.lon||0)}
+      };
+    };
+    try{
+      const warnUrl='https://api.weather.gov/alerts/active?status=actual&message_type=alert&event=Tornado%20Warning&event=Severe%20Thunderstorm%20Warning&event=Flash%20Flood%20Warning&event=Flood%20Warning';
+      const watchUrl='https://api.weather.gov/alerts/active?status=actual&message_type=alert&event=Tornado%20Watch&event=Severe%20Thunderstorm%20Watch';
+      const [warnRes,watchRes]=await Promise.all([fetch(warnUrl),fetch(watchUrl)]);
+      const [warnJson,watchJson]=await Promise.all([warnRes.json(),watchRes.json()]);
+      const warnFeatures=Array.isArray(warnJson&&warnJson.features)?warnJson.features:[];
+      const watchFeatures=Array.isArray(watchJson&&watchJson.features)?watchJson.features:[];
+      rawWarnings=warnFeatures.map(toItem).filter((x)=>Number.isFinite(x.lat)&&Number.isFinite(x.lon));
+      rawWatches=watchFeatures.map(toItem).filter((x)=>Number.isFinite(x.lat)&&Number.isFinite(x.lon));
+      overlayWarnGeo.clearLayers();
+      overlayWatchGeo.clearLayers();
+      if(warnFeatures.length)overlayWarnGeo.addData({type:'FeatureCollection',features:warnFeatures});
+      if(watchFeatures.length)overlayWatchGeo.addData({type:'FeatureCollection',features:watchFeatures});
+      renderAlertLists();
+      applyWarningWatchVisibility();
+    }catch{
+      warnList.innerHTML='<div class="lsr-l">Warnings feed unavailable.</div>';
+      watchList.innerHTML='<div class="lsr-l">Watches feed unavailable.</div>';
+    }
+  }
+
+  function ymdhmUtc(d){
+    const p=(n)=>String(n).padStart(2,'0');
+    return ''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+p(d.getUTCHours())+p(d.getUTCMinutes());
+  }
+
+  function reportMeta(type){
+    const t=String(type||'').toLowerCase();
+    if(t.includes('tornado'))return {icon:'tornado',severeType:'tornado'};
+    if(t.includes('hail'))return {icon:'weather_hail',severeType:'hail'};
+    if(t.includes('wind'))return {icon:'air',severeType:'wind'};
+    if(t.includes('flood'))return {icon:'flood',severeType:''};
+    if(t.includes('snow'))return {icon:'weather_snowy',severeType:''};
+    return {icon:'report',severeType:''};
+  }
+
+  function reportIconColor(severeType){
+    if(severeType==='tornado')return '#ff4d42';
+    if(severeType==='hail')return '#6fc1ff';
+    if(severeType==='wind')return '#9aa6b2';
+    return '#e8a13a';
+  }
+
+  async function refreshStormReports(){
+    try{
+      const end=new Date();
+      const start=new Date(end.getTime()-8*60*60*1000);
+      const iso=(d)=>d.toISOString().slice(0,16)+'Z';
+      const url='https://mesonet.agron.iastate.edu/geojson/lsr.geojson?sts='+iso(start)+'&ets='+iso(end);
+      const res=await fetch(url);
+      const json=await res.json();
+      const features=Array.isArray(json&&json.features)?json.features:[];
+      const items=features.map((f)=>{
+        const p=f&&f.properties?f.properties:{};
+        const c=centerOfFeature(f)||{lat:0,lon:0};
+        const meta=reportMeta(p.typetext||p.type||'');
+        const vt=new Date(p.valid||p.valid_utc||p.utc_valid||Date.now());
+        const magRaw=(p.magnitude!==undefined&&p.magnitude!==null&&String(p.magnitude)!=='')?String(p.magnitude):String(p.mag||'').trim();
+        const mag=magRaw?magRaw:(meta.severeType==='hail'?'Size n/a':meta.severeType==='wind'?'Speed n/a':'');
+        const city=String(p.city||p.town||'').trim();
+        const county=String(p.county||'').trim();
+        const state=String(p.state||'').trim();
+        const place=[city,county,state].filter(Boolean).join(', ')||'Location unavailable';
+        return {
+          lat:Number(c.lat||0),
+          lon:Number(c.lon||0),
+          time:Number.isFinite(vt.getTime())?vt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'--:--',
+          type:String(p.typetext||p.type||'Report').replace(/\s+/g,' ').trim(),
+          icon:meta.icon,
+          severeType:meta.severeType,
+          mag,
+          place,
+          source:String(p.source||p.office||''),
+          sortTs:Number.isFinite(vt.getTime())?vt.getTime():0
+        };
+      }).filter((r)=>Number.isFinite(r.lat)&&Number.isFinite(r.lon)).sort((a,b)=>b.sortTs-a.sortTs);
+      rawReports=items;
+      renderReportList();
+      renderReportMarkers();
+    }catch{
+      reportList.innerHTML='<div class="lsr-l">Storm reports feed unavailable.</div>';
+    }
+  }
+
+  const overlayReportsLayer=L.layerGroup();
+  function renderReportMarkers(){
+    overlayReportsLayer.clearLayers();
+    rawReports.forEach((r)=>{
+      const col=reportIconColor(r.severeType);
+      const icon=L.divIcon({
+        className:'report-marker',
+        html:'<div class="rmk" style="background:'+col+'"><span class="ms">'+r.icon+'</span></div>',
+        iconSize:[24,24],
+        iconAnchor:[12,12]
+      });
+      const marker=L.marker([r.lat,r.lon],{icon});
+      marker.bindTooltip(r.type+(r.mag?' - '+r.mag:'')+'<br>'+r.place+'<br>'+r.time,{direction:'top',offset:[0,-12]});
+      marker.addTo(overlayReportsLayer);
+    });
+    applyReportMarkerVisibility();
+  }
+  function applyReportMarkerVisibility(){
+    const repbox=document.querySelector('.repbox');
+    const collapsed=repbox&&repbox.classList.contains('collapsed');
+    const frameCollapsed=document.querySelector('.info')&&document.querySelector('.info').classList.contains('frame-hidden');
+    if(collapsed||frameCollapsed){if(map.hasLayer(overlayReportsLayer))map.removeLayer(overlayReportsLayer);}
+    else if(!map.hasLayer(overlayReportsLayer))overlayReportsLayer.addTo(map);
+  }
+
+  function distanceKm(a,b,c,d){
+    const R=6371;
+    const toR=(x)=>x*Math.PI/180;
+    const dLat=toR(c-a),dLon=toR(d-b);
+    const q=Math.sin(dLat/2)**2+Math.cos(toR(a))*Math.cos(toR(c))*Math.sin(dLon/2)**2;
+    return 2*R*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));
+  }
+
+  function showNearestRadars(lat,lon,px,py){
+    const all=[...radarSites.values()].filter((s)=>!(hideTerminalRadars&&s.isTerminal)).map((s)=>({s,d:distanceKm(lat,lon,s.lat,s.lon)})).sort((a,b)=>a.d-b.d).slice(0,2);
+    if(!all.length)return;
+    nearestPop.innerHTML='<div class="ttl">Nearest Radars</div>'+all.map((x)=>'<div class="itm" data-rid="'+x.s.id+'"><div class="id">'+x.s.id+' - '+x.s.name+'</div><div class="meta">'+x.d.toFixed(0)+' km away</div></div>').join('');
+    nearestPop.style.left=Math.max(8,Math.min(px,window.innerWidth-250))+'px';
+    nearestPop.style.top=Math.max(8,Math.min(py,window.innerHeight-140))+'px';
+    nearestPop.classList.add('show');
+  }
+
+  function loadFavorites(){
+    try{
+      const raw=JSON.parse(safeStorage.getItem('stormcast.favorites')||'[]');
+      if(Array.isArray(raw))favorites=Array.from({length:6},(_,i)=>raw[i]||null);
+    }catch{}
+    homeRid=safeStorage.getItem('stormcast.homeRid')||'';
+  }
+
+  function saveFavorites(){
+    safeStorage.setItem('stormcast.favorites',JSON.stringify(favorites));
+    safeStorage.setItem('stormcast.homeRid',homeRid||'');
+  }
+
+  function renderFavorites(){
+    favGrid.innerHTML='';
+    favorites.forEach((rid,i)=>{
+      const n=document.createElement('div');
+      n.className='fav';
+      const site=rid?radarSites.get(rid):null;
+      const isHome=!!rid&&rid===homeRid;
+      n.innerHTML='<button class="setbtn2'+(rid?' fav-on':'')+(isHome?' home-on':'')+'" data-a="go" data-i="'+i+'">'+(isHome?'<span class="home-dot" aria-label="Default"></span>':'')+'<span class="g">'+(i+1)+'</span><span class="sid">'+(site?site.id:'-')+'</span></button>';
+      favGrid.appendChild(n);
+    });
+  }
+
+  function productCodeFor(prod,tilt){
+    const t=String(tilt||'0.5');
+    const byProd={
+      Reflectivity:{'0.5':'N0B','1.5':'N1B','2.4':'N2B','3.4':'N3B'},
+      Velocity:{'0.5':'N0U','1.5':'N1U','2.4':'N2U','3.4':'N3U'},
+      'Dual-Pol':{'0.5':'N0X','1.5':'N1X','2.4':'N2X','3.4':'N3X'},
+      Precipitation:{'0.5':'OHA','1.5':'OHA','2.4':'OHA','3.4':'OHA'}
+    };
+    return (byProd[prod]&&byProd[prod][t])||'N0B';
+  }
+
+  function inferProductTiltFromCode(code){
+    const c=String(code||'N0B').toUpperCase();
+    const tiltMap={0:'0.5',1:'1.5',2:'2.4',3:'3.4'};
+    const t=tiltMap[Number(c[1])]||'0.5';
+    let prod='Reflectivity';
+    if(c.endsWith('U'))prod='Velocity';
+    else if(c.endsWith('X'))prod='Dual-Pol';
+    else if(c==='OHA')prod='Precipitation';
+    return {prod,tilt:t};
+  }
+
+  function applyTiltButtons(){
+    const row=document.getElementById('tiltRow');
+    if(!row)return;
+    row.querySelectorAll('.tilt-btn').forEach((b)=>b.classList.toggle('on',b.dataset.tilt===selectedTilt));
+  }
+
+  function applyProductTilt(){
+    currentProduct=productCodeFor(selectedProdName,selectedTilt);
+    safeStorage.setItem('stormcast.product',currentProduct);
+    safeStorage.setItem('stormcast.tilt',selectedTilt);
+  }
+
+  function openMenu(menu,x,y,items){
+    menu.innerHTML=items.map((it)=>'<button type="button" data-a="'+it.a+'">'+it.t+'</button>').join('');
+    menu.style.left=Math.max(8,Math.min(x,window.innerWidth-220))+'px';
+    menu.style.top=Math.max(8,Math.min(y,window.innerHeight-180))+'px';
+    menu.classList.add('show');
+  }
+  function hideMenus(){favMenu.classList.remove('show');viewMenu.classList.remove('show');gfxMenu.classList.remove('show');}
+
+  const RIDGE=(stamp)=>'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::'+currentRid+'-'+currentProduct+'-'+stamp+'/{z}/{x}/{y}.png';
+  let frameStamps=[],curLayer=null,frameIdx=0;
+  let radarOpacity=0.85;
+  let radarFilter='';
+  let loopFrameCount=Math.max(20,Math.min(60,Number(safeStorage.getItem('stormcast.loopFrameCount')||'40')));
+  let castWinRef=null;
+
+  function updateTerminalToggleButton(){
+    if(!radarTerminalToggle)return;
+    radarTerminalToggle.classList.toggle('on',hideTerminalRadars);
+    radarTerminalToggle.title=hideTerminalRadars?'Showing WSR-88D only':'Showing WSR-88D + terminal';
+  }
+
+  function visibleRadarSitesForDropdown(){
+    const q=String((radarSiteSearch&&radarSiteSearch.value)||'').trim().toLowerCase();
+    return [...radarSites.values()].filter((s)=>{
+      if(hideTerminalRadars&&s.isTerminal)return false;
+      if(!q)return true;
+      return (s.id+' '+s.name).toLowerCase().includes(q);
+    }).sort((a,b)=>a.id.localeCompare(b.id));
+  }
+
+  function visibleRadarSitesForMap(){
+    return [...radarSites.values()].filter((s)=>!(hideTerminalRadars&&s.isTerminal));
+  }
+
+  function rebuildRadarSiteDropdown(){
+    const sites=visibleRadarSitesForDropdown();
+    const byGroup={};
+    sites.forEach((s)=>{if(!byGroup[s.group])byGroup[s.group]=[];byGroup[s.group].push(s);});
+    radarSiteSelect.innerHTML='';
+    Object.keys(byGroup).forEach((g)=>{
+      const og=document.createElement('optgroup');
+      og.label=g;
+      byGroup[g].forEach((s)=>{
+        const o=document.createElement('option');
+        o.value=s.id;
+        o.textContent=s.id+' - '+s.name;
+        og.appendChild(o);
+      });
+      radarSiteSelect.appendChild(og);
+    });
+    if(!radarSiteSelect.options.length){
+      const o=document.createElement('option');
+      o.textContent='No radar sites match filter';
+      o.disabled=true;
+      o.selected=true;
+      radarSiteSelect.appendChild(o);
+      return;
+    }
+    if([...radarSiteSelect.options].some((o)=>o.value===currentRid))radarSiteSelect.value=currentRid;
+    else currentRid=radarSiteSelect.options[0].value;
+  }
+
+  function renderRadarSitesOnMap(){
+    radarSiteLayer.clearLayers();
+    visibleRadarSitesForMap().forEach((s)=>{
+      const selected=s.id===currentRid;
+      const marker=L.circleMarker([s.lat,s.lon],{
+        radius:selected?5:3.5,
+        color:selected?'#f0cc4c':'#5a9bf0',
+        weight:1.4,
+        fillColor:selected?'#f0cc4c':'#5a9bf0',
+        fillOpacity:selected?0.95:0.75,
+        opacity:0.95,
+        pane:'overlayPane'
+      });
+      marker.bindTooltip(s.id+' - '+s.name+(s.isTerminal?' (Terminal)':''),{direction:'top',offset:[0,-4]});
+      marker.on('click',()=>{
+        if(radarSiteSelect&&[...radarSiteSelect.options].some((o)=>o.value===s.id))radarSiteSelect.value=s.id;
+        currentRid=s.id;
+        applySelectedRadar(false);
+      });
+      marker.addTo(radarSiteLayer);
+    });
+  }
+
+  async function loadRadarSites(){
+    const nets=[['NEXRAD','WSR-88D'],['TDWR','Terminal Radar']];
+    for(const [net,label] of nets){
+      const res=await fetch('https://mesonet.agron.iastate.edu/geojson/network/'+net+'.geojson');
+      const json=await res.json();
+      const arr=(json.features||[]).map((f)=>({
+        id:String(f.id||'').toUpperCase(),
+        name:f.properties&&f.properties.name?f.properties.name:(f.properties&&f.properties.sname?f.properties.sname:'Unknown'),
+        lat:Number(f.geometry&&f.geometry.coordinates?f.geometry.coordinates[1]:0),
+        lon:Number(f.geometry&&f.geometry.coordinates?f.geometry.coordinates[0]:0),
+        group:label,
+        isTerminal:net==='TDWR'
+      })).filter((s)=>s.id&&Number.isFinite(s.lat)&&Number.isFinite(s.lon));
+      arr.forEach((s)=>radarSites.set(s.id,s));
+    }
+    if(homeRid&&radarSites.has(homeRid))currentRid=homeRid;
+    else if(!radarSites.has(currentRid)&&radarSites.has('KOAX'))currentRid='KOAX';
+    rebuildRadarSiteDropdown();
+    renderRadarSitesOnMap();
+    renderFavorites();
+    applySelectedRadar(true);
+  }
+
+  function applySelectedRadar(_initial){
+    if(radarSiteSelect&&radarSiteSelect.value)currentRid=radarSiteSelect.value;
+    if(!radarSites.has(currentRid))return;
+    safeStorage.setItem('stormcast.rid',currentRid);
+    const sel=radarSites.get(currentRid);
+    if(sel){
+      currentRadarTz=estimateTimeZoneFromLon(sel.lon);
+    }
+    renderRadarSitesOnMap();
+    loadRadar();
+    sync();
+  }
+
+  function radarLayer(stamp){
+    return L.tileLayer(RIDGE(stamp),{opacity:0,zIndex:300,maxZoom:18,updateWhenZooming:false,keepBuffer:4});
+  }
+
+  function parseStamp(s){
+    if(s==='0')return 'LIVE';
+    const m=s.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/);
+    if(!m)return s;
+    const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
+    return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  }
+
+  function updateClock(){
+    const now=new Date();
+    const ltEl=document.getElementById('lt');
+    const lzEl=document.getElementById('lz');
+    const utEl=document.getElementById('ut');
+    if(!ltEl||!lzEl||!utEl)return;
+    try{
+      const tz=currentRadarTz||Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:true,timeZoneName:'short'}).formatToParts(now);
+      const hh=(parts.find((p)=>p.type==='hour')||{}).value||'--';
+      const mm=(parts.find((p)=>p.type==='minute')||{}).value||'--';
+      const day=(parts.find((p)=>p.type==='dayPeriod')||{}).value||'';
+      const z=(parts.find((p)=>p.type==='timeZoneName')||{}).value||'';
+      ltEl.textContent=hh+':'+mm+' '+day;
+      lzEl.textContent=z;
+    }catch{
+      ltEl.textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      lzEl.textContent='LT';
+    }
+    utEl.textContent='UTC '+now.toISOString().slice(11,16)+'Z';
+    window._clockShort=ltEl.textContent;
+  }
+
+  function showFrame(i){
+    if(!frameStamps.length)return;
+    frameIdx=(i+frameStamps.length)%frameStamps.length;
+    const stamp=frameStamps[frameIdx];
+    const next=radarLayer(stamp).addTo(map);
+    let o=0;
+    const iv=setInterval(()=>{
+      o+=0.12;
+      next.setOpacity(Math.min(radarOpacity,o));
+      if(o>=radarOpacity){
+        clearInterval(iv);
+        const old=curLayer;
+        curLayer=next;
+        applyRadarPalette();
+        if(old)setTimeout(()=>map.removeLayer(old),60);
+      }
+    },16);
+
+    const last=frameIdx===frameStamps.length-1;
+    document.getElementById('tbStamp').textContent=parseStamp(stamp);
+    document.getElementById('fc').textContent='Frame '+(frameIdx+1)+'/'+frameStamps.length+(last?' - LIVE':'');
+    const p=frameStamps.length>1?frameIdx/(frameStamps.length-1):1;
+    fill.style.width=(p*100)+'%';
+    knob.style.left=(p*100)+'%';
+    sync();
+  }
+
+  function fmt(d){
+    const p=(n)=>String(n).padStart(2,'0');
+    return ''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+p(d.getUTCHours())+p(d.getUTCMinutes());
+  }
+
+  function gridStamps(historyFrames){
+    const arr=[];
+    const now=new Date();
+    now.setUTCSeconds(0,0);
+    now.setUTCMinutes(now.getUTCMinutes()-(now.getUTCMinutes()%5));
+    for(let k=historyFrames;k>=1;k--){
+      const d=new Date(now.getTime()-k*5*60000);
+      arr.push(fmt(d));
+    }
+    return arr;
+  }
+
+  async function fetchRealStamps(rid,product,historyFrames){
+    const iso=(d)=>d.toISOString().slice(0,16)+'Z';
+    const end=new Date();
+    const start=new Date(end.getTime()-(historyFrames+8)*7*60000);
+    const url='https://mesonet.agron.iastate.edu/json/radar.py?operation=list&radar='+encodeURIComponent(rid)+'&product='+encodeURIComponent(product)+'&start='+iso(start)+'&end='+iso(end);
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('bad status');
+    const data=await res.json();
+    const scans=Array.isArray(data&&data.scans)?data.scans:[];
+    const stamps=scans.map((s)=>{
+      const m=String((s&&s.ts)||'').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      return m?(m[1]+m[2]+m[3]+m[4]+m[5]):null;
+    }).filter(Boolean);
+    if(!stamps.length)throw new Error('no scans');
+    return stamps.slice(-historyFrames);
+  }
+
+  async function buildStamps(){
+    const historyFrames=loopFrameCount;
+    try{
+      const real=await fetchRealStamps(currentRid,currentProduct,historyFrames);
+      if(real.length)return [...real,'0'];
+    }catch{}
+    return [...gridStamps(historyFrames),'0'];
+  }
+
+  function renderTimelineTicks(){
+    const ticks=document.getElementById('ticks');
+    if(!ticks)return;
+    const count=Math.max(4,Math.min(14,Math.ceil(frameStamps.length/3)));
+    ticks.innerHTML='';
+    for(let i=0;i<count;i++)ticks.insertAdjacentHTML('beforeend','<i></i>');
+  }
+
+  async function loadRadar(){
+    const previousStamp=frameStamps[frameIdx]||'0';
+    frameStamps=await buildStamps();
+    renderTimelineTicks();
+    if(!frameStamps.length)return;
+    if(playing){
+      const idx=frameStamps.indexOf(previousStamp);
+      frameIdx=idx>=0?idx:Math.max(0,frameStamps.length-2);
+    }else frameIdx=frameStamps.length-1;
+    showFrame(frameIdx);
+  }
+
+  function updateGeoInputs(){
+    if(!latInput||!lonInput||!zoomInput)return;
+    const c=map.getCenter();
+    latInput.value=Number(c.lat).toFixed(4);
+    lonInput.value=Number(c.lng).toFixed(4);
+    zoomInput.value=Number(map.getZoom()).toFixed(2);
+  }
+
+  function applyGeoFromInput(target){
+    if(target===zoomInput){
+      const z=Number(zoomInput.value);
+      if(Number.isFinite(z))map.setZoom(Math.max(3,Math.min(18,z)));
+      return;
+    }
+    const lat=Number(latInput.value),lon=Number(lonInput.value);
+    if(Number.isFinite(lat)&&Number.isFinite(lon))map.setView([lat,lon],map.getZoom());
+  }
+
+  [latInput,lonInput,zoomInput].forEach((el)=>{
+    el.addEventListener('keydown',(e)=>{
+      if(e.key==='Enter')applyGeoFromInput(el);
+    });
+    el.addEventListener('blur',()=>applyGeoFromInput(el));
+  });
+
+  map.on('move zoom',()=>{
+    updateGeoInputs();
+    safeStorage.setItem('stormcast.mapView',JSON.stringify({lat:map.getCenter().lat,lon:map.getCenter().lng,z:map.getZoom()}));
+    renderAlertLists();
+    renderReportList();
+    sync();
+  });
+  updateGeoInputs();
+  if(radarSiteSearch){
+    radarSiteSearch.addEventListener('input',()=>{
+      rebuildRadarSiteDropdown();
+    });
+    radarSiteSearch.addEventListener('keydown',(e)=>{
+      if(e.key!=='Enter')return;
+      e.preventDefault();
+      const q=radarSiteSearch.value.trim().toUpperCase();
+      if(!q)return;
+      const candidates=visibleRadarSitesForDropdown();
+      const match=candidates.find((s)=>s.id===q)||candidates.find((s)=>s.id==='K'+q)||candidates.find((s)=>s.id===q.replace(/^K/,''))||candidates[0];
+      if(!match)return;
+      currentRid=match.id;
+      if(radarSiteSelect&&[...radarSiteSelect.options].some((o)=>o.value===match.id))radarSiteSelect.value=match.id;
+      applySelectedRadar(false);
+      radarSiteSearch.blur();
+    });
+  }
+  if(radarTerminalToggle){
+    radarTerminalToggle.addEventListener('click',()=>{
+      hideTerminalRadars=!hideTerminalRadars;
+      safeStorage.setItem('stormcast.hideTerminalRadars',hideTerminalRadars?'1':'0');
+      updateTerminalToggleButton();
+      rebuildRadarSiteDropdown();
+      renderRadarSitesOnMap();
+      if(!radarSites.has(currentRid)||(hideTerminalRadars&&radarSites.get(currentRid)&&radarSites.get(currentRid).isTerminal)){
+        if(radarSiteSelect&&radarSiteSelect.value){
+          currentRid=radarSiteSelect.value;
+          applySelectedRadar(false);
+        }
+      }
+    });
+  }
+  updateTerminalToggleButton();
+  radarSiteSelect.addEventListener('change',()=>applySelectedRadar(false));
+
+  const settingsPanel=document.getElementById('settingsPanel');
+  const logoLeft=document.getElementById('logoLeft');
+  const logoRight=document.getElementById('logoRight');
+  const logoRightFile=document.getElementById('logoRightFile');
+  const hazardInputs={
+    tor:document.getElementById('colTor'),
+    stw:document.getElementById('colStw'),
+    'flood-watch':document.getElementById('colFloodWatch'),
+    'stm-watch':document.getElementById('colStmWatch')
+  };
+
+  function readAsDataURL(file,cb){
+    const r=new FileReader();
+    r.onload=()=>cb(String(r.result||''));
+    r.readAsDataURL(file);
+  }
+  function setRightLogo(dataUrl){
+    logoRight.src=dataUrl||'';
+    logoRight.classList.toggle('hidden',!dataUrl);
+    safeStorage.setItem('stormcast.logo.right',dataUrl||'');
+  }
+  function applyFixedLeftLogo(){
+    const dark=document.documentElement.dataset.theme!=='light';
+    logoLeft.src=dark?LEFT_LOGO_DARK:LEFT_LOGO_LIGHT;
+  }
+  function applyHazardColors(){
+    const root=document.documentElement.style;
+    root.setProperty('--haz-tor',hazardInputs.tor.value);
+    root.setProperty('--haz-stw',hazardInputs.stw.value);
+    root.setProperty('--haz-flood-watch',hazardInputs['flood-watch'].value);
+    root.setProperty('--haz-stm-watch',hazardInputs['stm-watch'].value);
+    safeStorage.setItem('stormcast.haz.tor',hazardInputs.tor.value);
+    safeStorage.setItem('stormcast.haz.stw',hazardInputs.stw.value);
+    safeStorage.setItem('stormcast.haz.floodwatch',hazardInputs['flood-watch'].value);
+    safeStorage.setItem('stormcast.haz.stmwatch',hazardInputs['stm-watch'].value);
+  }
+  function loadSettings(){
+    const r=safeStorage.getItem('stormcast.logo.right')||'';
+    applyFixedLeftLogo();
+    setRightLogo(r);
+    hazardInputs.tor.value=safeStorage.getItem('stormcast.haz.tor')||hazardInputs.tor.value;
+    hazardInputs.stw.value=safeStorage.getItem('stormcast.haz.stw')||hazardInputs.stw.value;
+    hazardInputs['flood-watch'].value=safeStorage.getItem('stormcast.haz.floodwatch')||hazardInputs['flood-watch'].value;
+    hazardInputs['stm-watch'].value=safeStorage.getItem('stormcast.haz.stmwatch')||hazardInputs['stm-watch'].value;
+    const pr=JSON.parse(safeStorage.getItem('stormcast.palette')||'{"preset":"grx","h":0,"s":1,"c":1,"b":1}');
+    document.getElementById('radarPalette').value=pr.preset||'grx';
+    document.getElementById('palHue').value=String(pr.h||0);
+    document.getElementById('palSat').value=String(pr.s||1);
+    document.getElementById('palCon').value=String(pr.c||1);
+    document.getElementById('palBri').value=String(pr.b||1);
+    radarOpacity=Math.max(0.2,Math.min(1,Number(safeStorage.getItem('stormcast.radarOpacity')||'0.85')));
+    document.getElementById('radarOpacity').value=String(radarOpacity);
+    applyRadarPalette();
+    applyHazardColors();
+  }
+
+  function applyRadarPalette(){
+    const preset=document.getElementById('radarPalette').value;
+    const h=Number(document.getElementById('palHue').value);
+    const s=Number(document.getElementById('palSat').value);
+    const c=Number(document.getElementById('palCon').value);
+    const b=Number(document.getElementById('palBri').value);
+    safeStorage.setItem('stormcast.palette',JSON.stringify({preset,h,s,c,b}));
+    const byPreset={
+      grx:{h:0,s:1.15,c:1.15,b:1},
+      vivid:{h:8,s:1.35,c:1.3,b:1.03},
+      wsi:{h:-6,s:1.08,c:1.2,b:1},
+      noc:{h:0,s:0.95,c:1.05,b:0.98},
+      custom:{h,s,c,b}
+    };
+    const f=byPreset[preset]||byPreset.grx;
+    const filter='hue-rotate('+f.h+'deg) saturate('+f.s+') contrast('+f.c+') brightness('+f.b+')';
+    radarFilter=filter;
+    if(curLayer&&curLayer.getContainer&&curLayer.getContainer())curLayer.getContainer().style.filter=filter;
+    if(curLayer&&curLayer.setOpacity)curLayer.setOpacity(radarOpacity);
+  }
+
+  document.getElementById('openSettings').onclick=()=>settingsPanel.classList.add('show');
+  document.getElementById('settingsClose').onclick=()=>{
+    settingsPanel.classList.remove('show');
+    showSettingsMain();
+  };
+  function showSettingsMain(){
+    document.getElementById('settingsBody').style.display='';
+    document.getElementById('aboutBody').style.display='none';
+    document.getElementById('settingsTitle').textContent='Settings';
+    document.getElementById('settingsAboutBack').style.display='none';
+  }
+  function showSettingsAbout(){
+    document.getElementById('settingsBody').style.display='none';
+    document.getElementById('aboutBody').style.display='';
+    document.getElementById('settingsTitle').textContent='About';
+    document.getElementById('settingsAboutBack').style.display='';
+  }
+  document.getElementById('settingsAboutBtn').onclick=showSettingsAbout;
+  document.getElementById('settingsAboutBack').onclick=showSettingsMain;
+
+  const fontGrid=document.getElementById('fontGrid');
+  if(fontGrid){
+    GOOGLE_FONTS_CURATED.forEach((f)=>{
+      const id='gf_'+f.replace(/[^a-z0-9]/gi,'');
+      const row=document.createElement('label');
+      row.innerHTML='<input type="checkbox" id="'+id+'"> '+f;
+      fontGrid.appendChild(row);
+      const cb=row.querySelector('input');
+      cb.checked=activeGoogleFonts.has(f);
+      cb.addEventListener('change',()=>toggleGoogleFont(f,cb.checked));
+    });
+  }
+
+  const maptilerKeyInput=document.getElementById('maptilerKeyInput');
+  if(maptilerKeyInput){
+    maptilerKeyInput.value=maptilerKey();
+    maptilerKeyInput.addEventListener('change',()=>{
+      const v=maptilerKeyInput.value.trim()||DEFAULT_MAPTILER_KEY;
+      safeStorage.setItem('stormcast.maptilerKey',v);
+      rebuildBaseLayers();
+      sync();
+    });
+  }
+  document.getElementById('hideUiBtn').onclick=()=>{
+    document.body.classList.toggle('ui-hidden');
+    const hidden=document.body.classList.contains('ui-hidden');
+    document.getElementById('hideUiBtn').textContent=hidden?'Show UI':'Hide UI';
+    safeStorage.setItem('stormcast.uiHidden',document.body.classList.contains('ui-hidden')?'1':'0');
+    if(hidden){
+      uiTip.classList.add('show');
+      clearTimeout(uiTipTimer);
+      uiTipTimer=setTimeout(()=>uiTip.classList.remove('show'),2500);
+    }else uiTip.classList.remove('show');
+    setTimeout(()=>map.invalidateSize(),0);
+    setTimeout(()=>map.invalidateSize(),220);
+  };
+  document.getElementById('setLogoRightBtn').onclick=()=>logoRightFile.click();
+  document.getElementById('clearLogoRightBtn').onclick=()=>setRightLogo('');
+  logoRightFile.addEventListener('change',(e)=>{const f=e.target.files&&e.target.files[0];if(f)readAsDataURL(f,(u)=>setRightLogo(u));e.target.value='';});
+  Object.values(hazardInputs).forEach((inp)=>inp.addEventListener('input',applyHazardColors));
+  ['radarPalette','palHue','palSat','palCon','palBri'].forEach((id)=>document.getElementById(id).addEventListener('input',applyRadarPalette));
+  document.getElementById('radarOpacity').addEventListener('input',()=>{
+    radarOpacity=Math.max(0.2,Math.min(1,Number(document.getElementById('radarOpacity').value)||0.85));
+    safeStorage.setItem('stormcast.radarOpacity',String(radarOpacity));
+    applyRadarPalette();
+  });
+
+  function setLayerToggle(btn,layer,settingsId){
+    const button=document.getElementById(btn);
+    const check=document.getElementById(settingsId);
+    const apply=(on)=>{button.classList.toggle('on',on);check.checked=on;if(layer)toggleLayer(layer,on);};
+    const saved=safeStorage.getItem('stormcast.layer.'+settingsId);
+    if(saved!==null)apply(saved==='1');
+    button.addEventListener('click',()=>{const on=!button.classList.contains('on');apply(on);safeStorage.setItem('stormcast.layer.'+settingsId,on?'1':'0');});
+    check.addEventListener('change',()=>{apply(check.checked);safeStorage.setItem('stormcast.layer.'+settingsId,check.checked?'1':'0');});
+  }
+  setLayerToggle('btnRoadLayer',overlayRoads,'lyRoads');
+  setLayerToggle('btnCountyLayer',overlayCounties,'lyCounties');
+  setLayerToggle('btnCityLayer',overlayCities,'lyCities');
+  setLayerToggle('btnWarnLayer',null,'lyWarnings');
+  const warnSaved=safeStorage.getItem('stormcast.layer.lyWarnings');
+  const watchSaved=safeStorage.getItem('stormcast.layer.lyWatches');
+  if(warnSaved!==null)document.getElementById('lyWarnings').checked=warnSaved==='1';
+  if(watchSaved!==null)document.getElementById('lyWatches').checked=watchSaved==='1';
+  const stateSaved=safeStorage.getItem('stormcast.layer.lyStates');
+  if(stateSaved!==null)document.getElementById('lyStates').checked=stateSaved==='1';
+  toggleLayer(overlayStates,document.getElementById('lyStates').checked);
+  document.getElementById('lyStates').addEventListener('change',(e)=>{toggleLayer(overlayStates,e.target.checked);safeStorage.setItem('stormcast.layer.lyStates',e.target.checked?'1':'0');});
+
+  function applyWarningWatchVisibility(){
+    const sw=document.getElementById('lyWarnings').checked;
+    const st=document.getElementById('lyWatches').checked;
+    toggleLayer(overlayWarnGeo,sw);
+    toggleLayer(overlayWatchGeo,st);
+  }
+  document.getElementById('btnWarnLayer').addEventListener('click',applyWarningWatchVisibility);
+  document.getElementById('lyWarnings').addEventListener('change',()=>{safeStorage.setItem('stormcast.layer.lyWarnings',document.getElementById('lyWarnings').checked?'1':'0');applyWarningWatchVisibility();});
+  document.getElementById('lyWatches').addEventListener('change',()=>{safeStorage.setItem('stormcast.layer.lyWatches',document.getElementById('lyWatches').checked?'1':'0');applyWarningWatchVisibility();});
+  loadSettings();
+  loadFavorites();
+  renderFavorites();
+  applyWarningWatchVisibility();
+  refreshAlertPolygons();
+  setInterval(refreshAlertPolygons,5*60*1000);
+  refreshStormReports();
+  setInterval(refreshStormReports,3*60*1000);
+
+  let playing=false,rock=false,dir=1,timer=null;
+  const speedMs=[900,600,350];
+  const speedLbl=['0.5x','1.0x','2.0x'];
+  let speedIdx=1;
+  function step(){
+    if(!frameStamps.length)return;
+    if(rock){
+      if(frameIdx>=frameStamps.length-1)dir=-1;
+      else if(frameIdx<=0)dir=1;
+      showFrame(frameIdx+dir);
+    }else showFrame(frameIdx+1);
+  }
+  function play(on){
+    playing=on;
+    clearInterval(timer);
+    const pb=document.getElementById('btnPlay');
+    if(on){
+      timer=setInterval(step,speedMs[speedIdx]);
+      pb.classList.add('on');
+      pb.querySelector('.ms').textContent='pause';
+    }else{
+      pb.classList.remove('on');
+      pb.querySelector('.ms').textContent='play_arrow';
+    }
+  }
+
+  document.getElementById('btnPlay').onclick=()=>{
+    if(playing)play(false);
+    else{
+      rock=false;
+      document.getElementById('btnRock').classList.remove('on');
+      play(true);
+    }
+  };
+  document.getElementById('btnRock').onclick=()=>{
+    const r=document.getElementById('btnRock');
+    rock=!rock;
+    r.classList.toggle('on',rock);
+    if(rock&&!playing)play(true);
+  };
+  document.getElementById('btnSpeed').onclick=()=>{
+    speedIdx=(speedIdx+1)%speedMs.length;
+    document.getElementById('speedLbl').textContent=speedLbl[speedIdx];
+    safeStorage.setItem('stormcast.speedIdx',String(speedIdx));
+    if(playing)play(true);
+  };
+  document.getElementById('btnStop').onclick=()=>{
+    play(false);
+    rock=false;
+    document.getElementById('btnRock').classList.remove('on');
+    showFrame(frameStamps.length-1);
+  };
+  document.getElementById('btnPrev').onclick=()=>{play(false);showFrame(frameIdx-1);};
+  document.getElementById('btnNext').onclick=()=>{play(false);showFrame(frameIdx+1);};
+  document.getElementById('track').onclick=(e)=>{
+    if(!frameStamps.length)return;
+    const r=e.currentTarget.getBoundingClientRect();
+    showFrame(Math.round(((e.clientX-r.left)/r.width)*(frameStamps.length-1)));
+    play(false);
+  };
+
+  const loopFrameCountSelect=document.getElementById('loopFrameCount');
+  if(loopFrameCountSelect){
+    loopFrameCountSelect.value=String(loopFrameCount);
+    loopFrameCountSelect.addEventListener('change',()=>{
+      loopFrameCount=Math.max(20,Math.min(60,Number(loopFrameCountSelect.value)||40));
+      safeStorage.setItem('stormcast.loopFrameCount',String(loopFrameCount));
+      loadRadar();
+    });
+  }
+
+  document.getElementById('zin').onclick=()=>map.zoomIn();
+  document.getElementById('zout').onclick=()=>map.zoomOut();
+
+  document.querySelectorAll('.grp.product .key.product').forEach((k)=>{
+    k.onclick=()=>{
+      document.querySelectorAll('.grp.product .key.product').forEach((x)=>x.classList.remove('on'));
+      k.classList.add('on');
+      selectedProdName=k.dataset.prod||k.textContent.trim();
+      applyProductTilt();
+      loadRadar();
+      sync();
+    };
+  });
+
+  const tiltRow=document.getElementById('tiltRow');
+  if(tiltRow){
+    tiltRow.addEventListener('click',(e)=>{
+      const b=e.target.closest('.tilt-btn');
+      if(!b)return;
+      selectedTilt=b.dataset.tilt||'0.5';
+      applyTiltButtons();
+      applyProductTilt();
+      loadRadar();
+      sync();
+    });
+  }
+
+  const viewKeys=[...document.querySelectorAll('.grp.views .key')];
+  let views=Array.from({length:4},(_,i)=>({name:'V'+(i+1),color:'',lat:SITE[0],lon:SITE[1],z:8}));
+  try{const sv=JSON.parse(safeStorage.getItem('stormcast.views')||'[]');if(Array.isArray(sv)&&sv.length===4)views=sv;}catch{}
+  function renderViews(){
+    viewKeys.forEach((k,i)=>{
+      const nm=views[i].name||('V'+(i+1));
+      k.innerHTML='<span class="g">'+(i+1)+'</span>'+nm;
+      k.style.borderColor=views[i].color||'';
+      k.style.color=views[i].color||'';
+    });
+    safeStorage.setItem('stormcast.views',JSON.stringify(views));
+  }
+  renderViews();
+  viewKeys.forEach((k,i)=>{
+    k.onclick=()=>smoothTravelTo(views[i].lat,views[i].lon,views[i].z);
+    k.addEventListener('contextmenu',(e)=>{
+      e.preventDefault();
+      openMenu(viewMenu,e.clientX,e.clientY,[
+        {a:'set-'+i,t:'Set From Current Map'},
+        {a:'name-'+i,t:'Rename View'},
+        {a:'color-'+i,t:'Change Color'}
+      ]);
+    });
+  });
+
+  document.querySelectorAll('.deck .key').forEach((k)=>{
+    k.addEventListener('click',()=>{
+      k.classList.add('flash');
+      setTimeout(()=>k.classList.remove('flash'),180);
+    });
+  });
+
+  document.querySelectorAll('.toolbtn').forEach((btn)=>{
+    btn.addEventListener('click',()=>{
+      if(btn.id==='toolDraw'||btn.id==='toolBuild'||btn.id==='toolClipart')return;
+      btn.classList.toggle('on');
+    });
+  });
+
+  document.querySelectorAll('.phead-btn.minimize').forEach((btn)=>{
+    btn.addEventListener('click',()=>{
+      const pbox=btn.closest('.pbox');
+      const expanded=btn.getAttribute('aria-expanded')==='true';
+      pbox.classList.toggle('collapsed',expanded);
+      btn.setAttribute('aria-expanded',String(!expanded));
+      btn.querySelector('.ms').textContent=expanded?'crop_square':'minimize';
+      const openBoxes=[...document.querySelectorAll('.info .pbox:not(.collapsed)')];
+      openBoxes.forEach((box)=>{
+        if(box.classList.contains('repbox'))box.style.flex='1 1 auto';
+        else box.style.flex=openBoxes.length<=2?'1 1 0':'0 0 auto';
+      });
+      document.querySelectorAll('.info .pbox.collapsed').forEach((box)=>{box.style.flex='0 0 auto';});
+      const frameCollapsed=document.querySelector('.info').classList.contains('frame-hidden');
+      document.getElementById('vsplitWarn').style.display=(frameCollapsed||document.querySelector('.warnbox').classList.contains('collapsed'))?'none':'block';
+      document.getElementById('vsplitWatch').style.display=(frameCollapsed||document.querySelector('.watchbox').classList.contains('collapsed'))?'none':'block';
+      applyReportMarkerVisibility();
+    });
+  });
+
+  document.body.addEventListener('click',(ev)=>{
+    if(!favMenu.contains(ev.target)&&!viewMenu.contains(ev.target)&&!gfxMenu.contains(ev.target))hideMenus();
+    const gfxMenuAction=ev.target.closest('#gfxMenu button');
+    if(gfxMenuAction){
+      const targetId=gfxMenuTargetId;
+      if(gfxMenuAction.dataset.a==='delete'&&targetId!=null){
+        const target=layers.find((x)=>x.id===targetId);
+        if(target){
+          target.el.remove();
+          layers=layers.filter((x)=>x.id!==targetId);
+          if(selId===targetId)selId=null;
+          renderList();
+          refreshSelectionBoxes();
+          sync();
+        }
+      }
+      gfxMenuTargetId=null;
+      hideMenus();
+      return;
+    }
+    const favMenuAction=ev.target.closest('#favMenu button');
+    if(favMenuAction){
+      const [a,iStr]=(favMenuAction.dataset.a||'').split('-');
+      const i=Number(iStr);
+      if(Number.isInteger(i)&&i>=0&&i<6){
+        if(a==='set'){favorites[i]=currentRid;if(!homeRid)homeRid=currentRid;saveFavorites();renderFavorites();}
+        if(a==='home'){const rid=favorites[i];if(rid){homeRid=rid;saveFavorites();renderFavorites();}}
+        if(a==='clear'){favorites[i]=null;saveFavorites();renderFavorites();}
+      }
+      hideMenus();
+      return;
+    }
+    const viewMenuAction=ev.target.closest('#viewMenu button');
+    if(viewMenuAction){
+      const [a,iStr]=(viewMenuAction.dataset.a||'').split('-');
+      const i=Number(iStr);
+      if(Number.isInteger(i)&&i>=0&&i<4){
+        if(a==='set'){const c=map.getCenter();views[i].lat=c.lat;views[i].lon=c.lng;views[i].z=map.getZoom();}
+        if(a==='name'){const n=prompt('View name',views[i].name||('V'+(i+1)));if(n!==null)views[i].name=n.trim()||('V'+(i+1));}
+        if(a==='color'){const n=prompt('View color (hex)',views[i].color||'#a878e8');if(n!==null)views[i].color=n.trim();}
+        renderViews();
+      }
+      hideMenus();
+      return;
+    }
+    const btn=ev.target.closest('.pinpoint-btn');
+    if(btn){
+      const item=btn.closest('[data-lat][data-lon]');
+      if(!item)return;
+      const lat=Number(item.dataset.lat);
+      const lon=Number(item.dataset.lon);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
+      const minLat=Number(item.dataset.minlat);
+      const minLon=Number(item.dataset.minlon);
+      const maxLat=Number(item.dataset.maxlat);
+      const maxLon=Number(item.dataset.maxlon);
+      if(Number.isFinite(minLat)&&Number.isFinite(minLon)&&Number.isFinite(maxLat)&&Number.isFinite(maxLon)){
+        const b=L.latLngBounds([[minLat,minLon],[maxLat,maxLon]]);
+        map.flyToBounds(b,{animate:true,duration:1.25,padding:[42,42],maxZoom:Math.max(3,(map.getBoundsZoom(b)-2))});
+      }else smoothTravelTo(lat,lon,10);
+      return;
+    }
+    const favBtn=ev.target.closest('#favGrid button');
+    if(!favBtn)return;
+    const i=Number(favBtn.dataset.i);
+    const a=favBtn.dataset.a;
+    if(!Number.isInteger(i)||i<0||i>5)return;
+    if(a==='go'){
+      const rid=favorites[i];
+      if(rid&&radarSites.has(rid)){
+        radarSiteSelect.value=rid;
+        applySelectedRadar(false);
+      }
+    }
+  });
+
+  favGrid.addEventListener('contextmenu',(ev)=>{
+    const b=ev.target.closest('#favGrid button[data-i]');
+    if(!b)return;
+    ev.preventDefault();
+    const i=Number(b.dataset.i);
+    openMenu(favMenu,ev.clientX,ev.clientY,[
+      {a:'set-'+i,t:'Set from Current Radar'},
+      {a:'home-'+i,t:'Set as Home'},
+      {a:'clear-'+i,t:'Clear'}
+    ]);
+  });
+
+  function renderThemeIcon(){
+    const icon=document.documentElement.dataset.theme==='light'?'light_mode':'dark_mode';
+    document.querySelector('#themeBtn .ms').textContent=icon;
+  }
+  document.getElementById('themeBtn').onclick=()=>{
+    const d=document.documentElement;
+    const lightOn=d.dataset.theme==='light';
+    d.dataset.theme=lightOn?'dark':'light';
+    theme=d.dataset.theme;
+    safeStorage.setItem('stormcast.theme',theme);
+    map.removeLayer(base);
+    base=(lightOn?dark:light).addTo(map);
+    applyFixedLeftLogo();
+    renderThemeIcon();
+    if(curLayer)curLayer.bringToFront();
+    sync();
+  };
+
+  const app=document.getElementById('app');
+  let colL=250,colR=330,rowB=170;
+  try{
+    const lay=JSON.parse(safeStorage.getItem('stormcast.layout')||'{}');
+    if(Number.isFinite(lay.colL))colL=Math.max(250,Math.min(420,lay.colL));
+    if(Number.isFinite(lay.colR))colR=Math.max(330,Math.min(560,lay.colR));
+  }catch{}
+  function placeSplit(){
+    const pad=7,gap=7;
+    const sl=document.getElementById('splitL');
+    const sr=document.getElementById('splitR');
+    const sb=document.getElementById('splitB');
+    sl.style.left=(pad+colL+gap/2-3)+'px';
+    sl.style.top='90px';
+    sl.style.bottom=(pad+rowB+gap)+'px';
+    sr.style.right=(pad+colR+gap/2-3)+'px';
+    sr.style.top='90px';
+    sr.style.bottom=(pad+rowB+gap)+'px';
+    sb.style.bottom=(pad+rowB+gap/2-3)+'px';
+  }
+  function applyTracks(){
+    app.style.setProperty('--colL',colL+'px');
+    app.style.setProperty('--colR',colR+'px');
+    app.style.setProperty('--rowB',rowB+'px');
+    safeStorage.setItem('stormcast.layout',JSON.stringify({colL,colR,rowB,warnH,watchH}));
+    placeSplit();
+    setTimeout(()=>map.invalidateSize(),0);
+  }
+  placeSplit();
+
+  function dragSplit(el,fn){
+    el.addEventListener('mousedown',(e)=>{
+      e.preventDefault();
+      const mv=(ev)=>fn(ev);
+      const up=()=>{
+        window.removeEventListener('mousemove',mv);
+        window.removeEventListener('mouseup',up);
+      };
+      window.addEventListener('mousemove',mv);
+      window.addEventListener('mouseup',up);
+    });
+  }
+
+  dragSplit(document.getElementById('splitL'),(e)=>{colL=Math.max(250,Math.min(420,e.clientX-7));applyTracks();});
+  dragSplit(document.getElementById('splitR'),(e)=>{colR=Math.max(330,Math.min(560,window.innerWidth-e.clientX-7));applyTracks();});
+
+  let warnH=140;
+  const warnbox=document.querySelector('.warnbox');
+  const watchbox=document.querySelector('.watchbox');
+  let watchH=110;
+  try{
+    const lay=JSON.parse(safeStorage.getItem('stormcast.layout')||'{}');
+    if(Number.isFinite(lay.warnH))warnH=Math.max(80,lay.warnH);
+    if(Number.isFinite(lay.watchH))watchH=Math.max(70,lay.watchH);
+  }catch{}
+  warnbox.style.setProperty('--warnH',warnH+'px');
+  watchbox.style.setProperty('--watchH',watchH+'px');
+  document.getElementById('vsplitWarn').addEventListener('mousedown',(e)=>{
+    e.preventDefault();
+    const infoRect=document.querySelector('.info').getBoundingClientRect();
+    const top=warnbox.getBoundingClientRect().top;
+    const mv=(ev)=>{
+      warnH=Math.max(80,Math.min(ev.clientY-top,infoRect.height-220));
+      warnbox.style.setProperty('--warnH',warnH+'px');
+      safeStorage.setItem('stormcast.layout',JSON.stringify({colL,colR,rowB,warnH,watchH}));
+    };
+    const up=()=>{
+      window.removeEventListener('mousemove',mv);
+      window.removeEventListener('mouseup',up);
+    };
+    window.addEventListener('mousemove',mv);
+    window.addEventListener('mouseup',up);
+  });
+  document.getElementById('vsplitWatch').addEventListener('mousedown',(e)=>{
+    e.preventDefault();
+    const infoRect=document.querySelector('.info').getBoundingClientRect();
+    const top=watchbox.getBoundingClientRect().top;
+    const mv=(ev)=>{
+      watchH=Math.max(70,Math.min(ev.clientY-top,infoRect.height-160));
+      watchbox.style.setProperty('--watchH',watchH+'px');
+      safeStorage.setItem('stormcast.layout',JSON.stringify({colL,colR,rowB,warnH,watchH}));
+    };
+    const up=()=>{
+      window.removeEventListener('mousemove',mv);
+      window.removeEventListener('mouseup',up);
+    };
+    window.addEventListener('mousemove',mv);
+    window.addEventListener('mouseup',up);
+  });
+
+  const tele=document.getElementById('tele'),tctx=tele.getContext('2d'),teleBar=document.getElementById('teleBar');
+  const mapWaveLayer=document.getElementById('mapWaveLayer');
+  let teleTool='pen',teleColor='#ff4d42',drawing=false,strokes=[],cur=null,animT=0;
+  let drawWidth=Math.max(2,Math.min(12,Number(safeStorage.getItem('stormcast.draw.width')||'4')));
+  let drawShadow={
+    enabled:safeStorage.getItem('stormcast.draw.shadow.enabled')==='1',
+    color:safeStorage.getItem('stormcast.draw.shadow.color')||'#000000',
+    blur:Math.max(0,Math.min(20,Number(safeStorage.getItem('stormcast.draw.shadow.blur')||'8'))),
+    opacity:Math.max(0,Math.min(1,Number(safeStorage.getItem('stormcast.draw.shadow.opacity')||'0.65'))),
+    offsetY:Math.max(-12,Math.min(12,Number(safeStorage.getItem('stormcast.draw.shadow.offsetY')||'2')))
+  };
+  const teleWidth=document.getElementById('teleWidth');
+  const drawShadowBtn=document.getElementById('drawShadowBtn');
+  const drawShadowPop=document.getElementById('drawShadowPop');
+  const drawShadowEnable=document.getElementById('drawShadowEnable');
+  const drawShadowColor=document.getElementById('drawShadowColor');
+  const drawShadowBlur=document.getElementById('drawShadowBlur');
+  const drawShadowOpacity=document.getElementById('drawShadowOpacity');
+  const drawShadowOffsetY=document.getElementById('drawShadowOffsetY');
+  const COLORS=['#ff4d42','#e8a13a','#ffe14d','#52c074','#5a9bf0','#a878e8','#ffffff','#000000'];
+  (function(){
+    const sw=document.getElementById('teleColors');
+    COLORS.forEach((c,i)=>{
+      const d=document.createElement('div');
+      d.className='col'+(i===0?' on':'');
+      d.style.background=c;
+      d.onclick=()=>{
+        teleColor=c;
+        sw.querySelectorAll('.col').forEach((x)=>x.classList.remove('on'));
+        d.classList.add('on');
+      };
+      sw.appendChild(d);
+    });
+  })();
+
+  function hexToRgba(hex,alpha){
+    const raw=String(hex||'#000000').replace('#','');
+    const h=raw.length===3?raw.split('').map((c)=>c+c).join(''):raw.padEnd(6,'0').slice(0,6);
+    const r=parseInt(h.slice(0,2),16)||0;
+    const g=parseInt(h.slice(2,4),16)||0;
+    const b=parseInt(h.slice(4,6),16)||0;
+    return 'rgba('+r+','+g+','+b+','+alpha+')';
+  }
+
+  function saveDrawPrefs(){
+    safeStorage.setItem('stormcast.draw.width',String(drawWidth));
+    safeStorage.setItem('stormcast.draw.shadow.enabled',drawShadow.enabled?'1':'0');
+    safeStorage.setItem('stormcast.draw.shadow.color',drawShadow.color);
+    safeStorage.setItem('stormcast.draw.shadow.blur',String(drawShadow.blur));
+    safeStorage.setItem('stormcast.draw.shadow.opacity',String(drawShadow.opacity));
+    safeStorage.setItem('stormcast.draw.shadow.offsetY',String(drawShadow.offsetY));
+  }
+
+  function applyDrawShadow(ctx){
+    if(drawShadow.enabled){
+      ctx.shadowColor=hexToRgba(drawShadow.color,drawShadow.opacity);
+      ctx.shadowBlur=drawShadow.blur;
+      ctx.shadowOffsetX=0;
+      ctx.shadowOffsetY=drawShadow.offsetY;
+    }else{
+      ctx.shadowColor='rgba(0,0,0,0)';
+      ctx.shadowBlur=0;
+      ctx.shadowOffsetX=0;
+      ctx.shadowOffsetY=0;
+    }
+  }
+
+  function bindDrawShadowUi(){
+    if(teleWidth)teleWidth.value=String(drawWidth);
+    if(drawShadowEnable)drawShadowEnable.checked=drawShadow.enabled;
+    if(drawShadowColor)drawShadowColor.value=drawShadow.color;
+    if(drawShadowBlur)drawShadowBlur.value=String(drawShadow.blur);
+    if(drawShadowOpacity)drawShadowOpacity.value=String(drawShadow.opacity);
+    if(drawShadowOffsetY)drawShadowOffsetY.value=String(drawShadow.offsetY);
+    if(teleWidth){
+      teleWidth.addEventListener('input',()=>{
+        drawWidth=Math.max(2,Math.min(12,Number(teleWidth.value)||4));
+        saveDrawPrefs();
+        redraw(cur);
+        sync();
+      });
+    }
+    if(drawShadowBtn&&drawShadowPop){
+      drawShadowBtn.addEventListener('click',()=>{
+        if(!tele.classList.contains('active'))return;
+        const open=!drawShadowPop.classList.contains('show');
+        drawShadowPop.classList.toggle('show',open);
+        if(open){
+          const r=drawShadowBtn.getBoundingClientRect();
+          drawShadowPop.style.left=Math.max(8,Math.min(r.left,window.innerWidth-250))+'px';
+          drawShadowPop.style.top=Math.max(8,Math.min(r.bottom+6,window.innerHeight-220))+'px';
+        }
+      });
+    }
+    const hook=(el,key,coerce)=>{
+      if(!el)return;
+      const h=()=>{
+        drawShadow[key]=coerce(el);
+        saveDrawPrefs();
+        redraw(cur);
+        refreshTextShadows();
+        sync();
+      };
+      el.addEventListener('input',h);
+      el.addEventListener('change',h);
+    };
+    hook(drawShadowEnable,'enabled',(el)=>!!el.checked);
+    hook(drawShadowColor,'color',(el)=>String(el.value||'#000000'));
+    hook(drawShadowBlur,'blur',(el)=>Math.max(0,Math.min(20,Number(el.value)||0)));
+    hook(drawShadowOpacity,'opacity',(el)=>Math.max(0,Math.min(1,Number(el.value)||0)));
+    hook(drawShadowOffsetY,'offsetY',(el)=>Math.max(-12,Math.min(12,Number(el.value)||0)));
+    const closeBtn=document.getElementById('drawShadowClose');
+    if(closeBtn&&drawShadowPop)closeBtn.addEventListener('click',()=>drawShadowPop.classList.remove('show'));
+    document.addEventListener('mousedown',(ev)=>{
+      if(!drawShadowPop||!drawShadowPop.classList.contains('show'))return;
+      if(drawShadowPop.contains(ev.target)||drawShadowBtn.contains(ev.target))return;
+      drawShadowPop.classList.remove('show');
+    });
+  }
+  bindDrawShadowUi();
+
+  function fitTele(){
+    const r=document.querySelector('.radar').getBoundingClientRect();
+    tele.width=Math.max(1,Math.floor(r.width));
+    tele.height=Math.max(1,Math.floor(r.height));
+    redraw();
+  }
+  function setDrawUiState(active){
+    teleBar.classList.toggle('draw-off',!active);
+    document.getElementById('toolDraw').classList.toggle('on',active);
+  }
+  function setTeleTool(tool){
+    teleTool=tool;
+    teleBar.querySelectorAll('.tb[data-tool]').forEach((x)=>x.classList.toggle('on',x.dataset.tool===tool));
+  }
+  window.addEventListener('resize',fitTele);
+  function openTele(){
+    tele.classList.add('active');
+    map.dragging.disable();
+    map.doubleClickZoom.disable();
+    map.scrollWheelZoom.disable();
+    map.boxZoom.disable();
+    map.keyboard.disable();
+    if(map.tap)map.tap.disable();
+    setTeleTool('pen');
+    setDrawUiState(true);
+    fitTele();
+  }
+  function closeTele(){
+    tele.classList.remove('active');
+    map.dragging.enable();
+    map.doubleClickZoom.enable();
+    map.scrollWheelZoom.enable();
+    map.boxZoom.enable();
+    map.keyboard.enable();
+    if(map.tap)map.tap.enable();
+    setDrawUiState(false);
+  }
+  document.getElementById('toolDraw').onclick=()=>{tele.classList.contains('active')?closeTele():openTele();};
+  teleBar.querySelectorAll('.tb[data-tool]').forEach((b)=>b.onclick=()=>{
+    if(!tele.classList.contains('active'))return;
+    setTeleTool(b.dataset.tool);
+  });
+  teleBar.querySelectorAll('.tb[data-act]').forEach((b)=>b.onclick=()=>{
+    if(!tele.classList.contains('active'))return;
+    const a=b.dataset.act;
+    if(a==='undo')strokes.pop();
+    else if(a==='clear'){
+      if(!removeSelectedLayer((l)=>String(l.kind||'').includes('clipart')))strokes=[];
+    }
+    redraw();
+    sync();
+  });
+  setDrawUiState(false);
+  function containerPoint(e){const r=tele.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+  function toLatLng(pt){const ll=map.containerPointToLatLng([pt.x,pt.y]);return{lat:ll.lat,lng:ll.lng};}
+  tele.addEventListener('contextmenu',(e)=>{if(tele.classList.contains('active'))e.preventDefault();});
+  tele.addEventListener('mousedown',(e)=>{
+    if(!tele.classList.contains('active'))return;
+    e.stopPropagation();
+    const p=containerPoint(e);
+    if(e.button!==0)return;
+    e.preventDefault();
+    drawing=true;
+    cur={tool:teleTool,color:teleColor,width:drawWidth,seed:Math.random()*1000,pts:[toLatLng(p)]};
+  });
+  tele.addEventListener('mousemove',(e)=>{
+    if(!drawing)return;
+    e.stopPropagation();
+    e.preventDefault();
+    const p=toLatLng(containerPoint(e));
+    if(['pen','arrow','aarrow','coldfront','warmfront','stationaryfront','dryline'].includes(teleTool))cur.pts.push(p);else cur.pts[1]=p;
+    redraw(cur);
+  });
+  window.addEventListener('mouseup',()=>{
+    if(drawing&&cur){strokes.push(cur);cur=null;drawing=false;redraw();sync();}
+  });
+
+  map.on('contextmenu',(e)=>{
+    if(e.originalEvent)L.DomEvent.preventDefault(e.originalEvent);
+    showNearestRadars(e.latlng.lat,e.latlng.lng,e.containerPoint.x,e.containerPoint.y);
+  });
+  nearestPop.addEventListener('click',(ev)=>{
+    const it=ev.target.closest('.itm');
+    if(!it)return;
+    const rid=it.dataset.rid;
+    if(rid&&radarSites.has(rid)){
+      radarSiteSelect.value=rid;
+      applySelectedRadar(false);
+    }
+    nearestPop.classList.remove('show');
+  });
+  document.addEventListener('click',(ev)=>{if(!nearestPop.contains(ev.target))nearestPop.classList.remove('show');});
+
+  function drawAnimatedStroke(pathPoints,ctx,width,baseA,baseB){
+    if(pathPoints.length<2)return;
+    let minX=Infinity,maxX=-Infinity;
+    pathPoints.forEach((p)=>{if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;});
+    const span=Math.max(120,maxX-minX+120);
+    const shift=(animT*120)%span;
+    const g=ctx.createLinearGradient(minX-shift,0,minX-shift+span,0);
+    g.addColorStop(0,baseA);
+    g.addColorStop(0.5,baseB);
+    g.addColorStop(1,baseA);
+    ctx.strokeStyle=g;
+    ctx.lineWidth=width;
+    ctx.beginPath();
+    ctx.moveTo(pathPoints[0].x,pathPoints[0].y);
+    for(let i=1;i<pathPoints.length;i++)ctx.lineTo(pathPoints[i].x,pathPoints[i].y);
+    ctx.stroke();
+  }
+
+  function drawMovingOverlay(pathPoints,ctx,width,seed){
+    if(pathPoints.length<2)return;
+    let minX=Infinity,maxX=-Infinity;
+    pathPoints.forEach((p)=>{if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;});
+    const span=Math.max(180,maxX-minX+180);
+    const shift=((animT*70)+seed*37)%span;
+    const g=ctx.createLinearGradient(minX-shift,0,minX-shift+span,0);
+    g.addColorStop(0,'rgba(255,255,255,0)');
+    g.addColorStop(0.2,'rgba(255,255,255,.04)');
+    g.addColorStop(0.5,'rgba(255,255,255,.14)');
+    g.addColorStop(0.8,'rgba(255,255,255,.04)');
+    g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.strokeStyle=g;
+    ctx.lineWidth=Math.max(1,width*0.66);
+    ctx.beginPath();
+    ctx.moveTo(pathPoints[0].x,pathPoints[0].y);
+    for(let i=1;i<pathPoints.length;i++)ctx.lineTo(pathPoints[i].x,pathPoints[i].y);
+    ctx.stroke();
+  }
+
+  function drawArrowFlow(x0,y0,x1,y1,width,color,seed){
+    const dx=x1-x0,dy=y1-y0;
+    const len=Math.hypot(dx,dy);
+    if(len<20)return;
+    const ux=dx/len,uy=dy/len;
+    const spacing=Math.max(16,width*4.2);
+    const offset=((animT*40)+(seed*19))%spacing;
+    const size=Math.max(4,width*0.85);
+    tctx.fillStyle=color;
+    for(let d=offset;d<len-6;d+=spacing){
+      const cx=x0+ux*d,cy=y0+uy*d;
+      const nx=-uy,ny=ux;
+      const tipx=cx+ux*size*1.5,tipy=cy+uy*size*1.5;
+      const bcx=cx-ux*size*0.9,bcy=cy-uy*size*0.9;
+      tctx.beginPath();
+      tctx.moveTo(tipx,tipy);
+      tctx.lineTo(bcx+nx*size,bcy+ny*size);
+      tctx.lineTo(bcx-nx*size,bcy-ny*size);
+      tctx.closePath();
+      tctx.fill();
+    }
+  }
+
+  function sampleAlongPath(px,spacing,minCount,cb){
+    if(px.length<2)return;
+    const seg=[];
+    let total=0;
+    for(let i=1;i<px.length;i++){
+      const a=px[i-1],b=px[i];
+      const dx=b.x-a.x,dy=b.y-a.y;
+      const len=Math.hypot(dx,dy);
+      if(len<0.001)continue;
+      seg.push({a,b,len,dx,dy});
+      total+=len;
+    }
+    if(total<0.001||!seg.length)return;
+    const count=Math.max(minCount||1,Math.floor(total/spacing)+1);
+    for(let i=0;i<count;i++){
+      const d=((i+0.5)/count)*total;
+      let acc=0;
+      for(const s of seg){
+        if(d<=acc+s.len){
+          const t=(d-acc)/s.len;
+          const ux=s.dx/s.len,uy=s.dy/s.len,nx=-uy,ny=ux;
+          cb(s.a.x+s.dx*t,s.a.y+s.dy*t,ux,uy,nx,ny,i,count);
+          break;
+        }
+        acc+=s.len;
+      }
+    }
+  }
+
+  let strokeBuf=document.createElement('canvas'),strokeBufCtx=strokeBuf.getContext('2d');
+  function getStrokeBuffer(w,h){
+    if(strokeBuf.width!==w||strokeBuf.height!==h){strokeBuf.width=w;strokeBuf.height=h;}
+    else strokeBufCtx.clearRect(0,0,w,h);
+    return strokeBufCtx;
+  }
+
+  function drawStrokeShapes(s,ctx){
+    const width=Math.max(2,Number(s.width||drawWidth)||4);
+    const frontLine=Math.max(2,Math.round(width*0.78));
+    const frontSym=Math.max(4.8,width*1.35);
+    const frontSpacing=Math.max(18,Math.round(width*7.8));
+    ctx.strokeStyle=s.color;ctx.fillStyle=s.color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';
+    const p=s.pts;if(!p.length)return;
+    const px=p.map((q)=>map.latLngToContainerPoint([q.lat,q.lng]));
+    if(s.tool==='pen'){ctx.beginPath();ctx.moveTo(px[0].x,px[0].y);px.forEach((q)=>ctx.lineTo(q.x,q.y));ctx.stroke();}
+    else if(p.length<2)return;
+    else if(s.tool==='line'){drawAnimatedStroke(px,ctx,width,'rgba(255,255,255,.55)','rgba(255,255,255,.9)');}
+    else if(s.tool==='circle'){
+      const r=Math.hypot(px[1].x-px[0].x,px[1].y-px[0].y);
+      ctx.strokeStyle=s.color||'#ffffff';
+      ctx.beginPath();ctx.arc(px[0].x,px[0].y,r,0,7);ctx.stroke();
+    }
+    else if(s.tool==='measure'){
+      const x0=px[0].x,y0=px[0].y,x1=px[1].x,y1=px[1].y;
+      ctx.strokeStyle='rgba(190,196,204,.92)';
+      ctx.lineWidth=Math.max(1.4,Math.round(width*0.44));
+      ctx.setLineDash([7,4]);
+      ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+      ctx.setLineDash([]);
+      const miles=distanceKm(Number(p[0].lat||0),Number(p[0].lng||0),Number(p[1].lat||0),Number(p[1].lng||0))*0.621371;
+      const mx=(x0+x1)/2,my=(y0+y1)/2;
+      const lbl=miles.toFixed(1)+' mi';
+      ctx.font='700 13px Archivo';
+      const w=ctx.measureText(lbl).width+10;
+      ctx.fillStyle='rgba(0,0,0,.62)';
+      ctx.fillRect(mx-w/2,my-18,w,20);
+      ctx.fillStyle='#ffffff';
+      ctx.fillText(lbl,mx-w/2+5,my-4);
+      ctx.lineWidth=width;
+    }
+    else if(['coldfront','warmfront','stationaryfront','dryline'].includes(s.tool)){
+      let len=0;
+      for(let i=1;i<px.length;i++)len+=Math.hypot(px[i].x-px[i-1].x,px[i].y-px[i-1].y);
+      if(len<12)return;
+      const drawBase=(color,width)=>{
+        ctx.setLineDash([]);
+        ctx.lineWidth=width;
+        ctx.strokeStyle=color;
+        ctx.beginPath();
+        ctx.moveTo(px[0].x,px[0].y);
+        for(let i=1;i<px.length;i++)ctx.lineTo(px[i].x,px[i].y);
+        ctx.stroke();
+      };
+      const drawSemi=(cx,cy,r,ux,uy,nx,ny,color,side)=>{
+        const sx=(side>=0?nx:-nx),sy=(side>=0?ny:-ny);
+        const ta=Math.atan2(uy,ux);
+        const ccx=cx+sx*(r*0.18),ccy=cy+sy*(r*0.18);
+        ctx.fillStyle=color;
+        ctx.beginPath();
+        if(side>=0){
+          ctx.arc(ccx,ccy,r,ta+Math.PI,ta,true);
+          ctx.lineTo(ccx+r*Math.cos(ta),ccy+r*Math.sin(ta));
+        }else{
+          ctx.arc(ccx,ccy,r,ta,ta+Math.PI,true);
+          ctx.lineTo(ccx+r*Math.cos(ta+Math.PI),ccy+r*Math.sin(ta+Math.PI));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle=color;
+        ctx.lineWidth=Math.max(2,Math.round(frontLine*0.95));
+        ctx.beginPath();
+        if(side>=0)ctx.arc(ccx,ccy,r,ta+Math.PI,ta,true);
+        else ctx.arc(ccx,ccy,r,ta,ta+Math.PI,true);
+        ctx.stroke();
+      };
+      const drawTri=(cx,cy,size,ux,uy,nx,ny,color,side)=>{
+        const sx=(side>=0?nx:-nx),sy=(side>=0?ny:-ny);
+        const tx=ux,ty=uy;
+        ctx.fillStyle=color;
+        const tipx=cx+sx*(size*1.2),tipy=cy+sy*(size*1.2);
+        const bx=cx-sx*(size*0.15),by=cy-sy*(size*0.15);
+        const px1x=bx+tx*(size*0.82),px1y=by+ty*(size*0.82);
+        const px2x=bx-tx*(size*0.82),px2y=by-ty*(size*0.82);
+        ctx.beginPath();ctx.moveTo(tipx,tipy);ctx.lineTo(px1x,px1y);ctx.lineTo(px2x,px2y);ctx.closePath();ctx.fill();
+      };
+
+      if(s.tool==='coldfront'){
+        drawBase('#2f6fff',frontLine);
+        sampleAlongPath(px,frontSpacing,1,(cx,cy,ux,uy,nx,ny)=>drawTri(cx,cy,frontSym,ux,uy,nx,ny,'#2f6fff',-1));
+      }else if(s.tool==='warmfront'){
+        drawBase('#ff4b3b',frontLine);
+        const goingLeft=(px[px.length-1].x<px[0].x);
+        sampleAlongPath(px,frontSpacing,1,(cx,cy,ux,uy,nx,ny)=>drawSemi(cx,cy,Math.max(4.8,frontSym*0.88),ux,uy,nx,ny,'#ff4b3b',goingLeft?1:-1));
+      }else if(s.tool==='stationaryfront'){
+        drawBase('#6b5fa6',frontLine);
+        sampleAlongPath(px,Math.max(16,frontSpacing-2),2,(cx,cy,ux,uy,nx,ny,i)=>{
+          if(i%2===0)drawTri(cx,cy,frontSym,ux,uy,nx,ny,'#2f6fff',1);
+          else drawSemi(cx,cy,Math.max(4.8,frontSym*0.88),ux,uy,nx,ny,'#ff4b3b',-1);
+        });
+      }else if(s.tool==='dryline'){
+        ctx.setLineDash([10,8]);
+        drawAnimatedStroke(px,ctx,Math.max(2,frontLine-1),'rgba(232,161,58,.5)','rgba(243,195,119,.92)');
+        ctx.setLineDash([]);
+        sampleAlongPath(px,Math.max(14,frontSpacing-10),1,(cx,cy,ux,uy,nx,ny)=>{ctx.strokeStyle='#f3c377';ctx.beginPath();ctx.arc(cx+nx*Math.max(3,width*0.8),cy+ny*Math.max(3,width*0.8),Math.max(2.6,width*0.62),0,7);ctx.stroke();});
+      }
+      ctx.lineWidth=width;
+    }
+    else if(s.tool==='arrow'||s.tool==='aarrow'){
+      if(px.length<2)return;
+      ctx.beginPath();ctx.moveTo(px[0].x,px[0].y);for(let i=1;i<px.length;i++)ctx.lineTo(px[i].x,px[i].y);ctx.stroke();
+      const last=px[px.length-1],prev=px[px.length-2]||px[0];
+      const a=Math.atan2(last.y-prev.y,last.x-prev.x),hl=16;
+      ctx.fillStyle=s.color;
+      ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(last.x-hl*Math.cos(a-0.4),last.y-hl*Math.sin(a-0.4));ctx.lineTo(last.x-hl*Math.cos(a+0.4),last.y-hl*Math.sin(a+0.4));ctx.closePath();ctx.fill();
+      if(s.tool==='aarrow')drawArrowFlow(px[0].x,px[0].y,last.x,last.y,width,s.color||'#ffffff',Number(s.seed||0));
+    }
+    else{
+      const x0=px[0].x,y0=px[0].y,x1=px[1].x,y1=px[1].y;
+      ctx.strokeStyle=s.color;
+      ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+      const a=Math.atan2(y1-y0,x1-x0),hl=16;
+      ctx.fillStyle=s.color;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x1-hl*Math.cos(a-0.4),y1-hl*Math.sin(a-0.4));ctx.lineTo(x1-hl*Math.cos(a+0.4),y1-hl*Math.sin(a+0.4));ctx.closePath();ctx.fill();
+    }
+    drawMovingOverlay(px,ctx,width,Number(s.seed||0));
+  }
+
+  function drawStroke(s,ctx){
+    if(!drawShadow.enabled){
+      ctx.shadowColor='rgba(0,0,0,0)';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+      drawStrokeShapes(s,ctx);
+      return;
+    }
+    const buf=getStrokeBuffer(ctx.canvas.width,ctx.canvas.height);
+    buf.shadowColor='rgba(0,0,0,0)';buf.shadowBlur=0;buf.shadowOffsetX=0;buf.shadowOffsetY=0;
+    drawStrokeShapes(s,buf);
+    ctx.save();
+    ctx.shadowColor=hexToRgba(drawShadow.color,drawShadow.opacity);
+    ctx.shadowBlur=drawShadow.blur;
+    ctx.shadowOffsetX=0;
+    ctx.shadowOffsetY=drawShadow.offsetY;
+    ctx.drawImage(strokeBuf,0,0);
+    ctx.restore();
+    ctx.shadowColor='rgba(0,0,0,0)';ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+    ctx.drawImage(strokeBuf,0,0);
+  }
+  function redraw(preview){tctx.clearRect(0,0,tele.width,tele.height);strokes.forEach((s)=>drawStroke(s,tctx));if(preview)drawStroke(preview,tctx);}
+  function animLoop(){animT+=0.02;if(strokes.length){redraw();sync();}requestAnimationFrame(animLoop);}requestAnimationFrame(animLoop);
+  map.on('move zoom',()=>{layers.forEach((l)=>{if(l.moveWithMap)applyT(l);});redraw();});
+
+  const buildPanel=document.getElementById('buildPanel'),gfxLayer=document.getElementById('gfxLayer'),gfxFile=document.getElementById('gfxFile'),layerList=document.getElementById('layerList');
+  const clipartPanel=document.getElementById('clipartPanel');
+  const clipartSearchInput=document.getElementById('clipartSearch');
+  const clipartGrid=document.getElementById('clipartGrid');
+  const clipartCount=document.getElementById('clipartCount');
+  const clipartPageLabel=document.getElementById('clipartPageLabel');
+  const clipartPrevPage=document.getElementById('clipartPrevPage');
+  const clipartNextPage=document.getElementById('clipartNextPage');
+  const WSI_CLIPART_BASE='../wsi_weather_icons___as_seen_on_tv_by_malekmasoud_dbt53t2/';
+  const CLIPART_PAGE_SIZE=24;
+  const clipartManifest=Array.isArray(window.STORMCAST_WSI_CLIPART)?window.STORMCAST_WSI_CLIPART:[];
+  let clipartPage=1;
+  let clipartFiltered=clipartManifest.slice();
+  let layers=[],selId=null,lid=0;
+
+  function makeTextSvg(meta){
+    const txt=String((meta&&meta.text)||'TEXT').slice(0,120).replace(/[<>&]/g,'');
+    const font=String((meta&&meta.font)||'Archivo');
+    const color=String((meta&&meta.color)||'#ffffff');
+    const size=Math.max(24,Math.min(180,Number(meta&&meta.size)||104));
+    const sh=drawShadow;
+    const filterDef=sh.enabled?'<filter id="tsh" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="'+sh.offsetY+'" stdDeviation="'+Math.max(0,sh.blur/2)+'" flood-color="'+sh.color+'" flood-opacity="'+sh.opacity+'"/></filter>':'';
+    const styleFilter=sh.enabled?'filter:url(#tsh);':'';
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="220" viewBox="0 0 640 220">'+filterDef+'<style>text{font-family:'+font+';font-size:'+size+'px;font-weight:800;fill:'+color+';'+styleFilter+'}</style><text x="320" y="150" text-anchor="middle">'+txt+'</text></svg>';
+  }
+
+  function refreshTextShadows(){
+    let changed=false;
+    layers.forEach((l)=>{
+      if(String(l.kind||'')==='text'){
+        l.url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(makeTextSvg(l.meta));
+        l.el.querySelector('img').src=l.url;
+        changed=true;
+      }
+    });
+    if(changed)sync();
+  }
+
+  function textFontOptions(){
+    return ['Archivo','Archivo Narrow','Georgia'].concat(Array.from(activeGoogleFonts).sort());
+  }
+
+  function openTextEditor(l){
+    if(!l||String(l.kind||'')!=='text')return;
+    const existing=document.getElementById('textEditBox');
+    if(existing)existing.remove();
+    const existingTools=document.getElementById('textEditTools');
+    if(existingTools)existingTools.remove();
+    const box=document.createElement('textarea');
+    box.id='textEditBox';
+    box.className='text-edit';
+    box.value=String((l.meta&&l.meta.text)||'');
+    box.style.fontFamily=String((l.meta&&l.meta.font)||'Archivo');
+    const r=l.el.getBoundingClientRect();
+    const rr=document.querySelector('.radar').getBoundingClientRect();
+    box.style.left=(r.left-rr.left)+'px';
+    box.style.top=(r.top-rr.top)+'px';
+    box.style.width=Math.max(120,r.width)+'px';
+    box.style.height=Math.max(56,r.height)+'px';
+    document.querySelector('.radar').appendChild(box);
+
+    const tools=document.createElement('div');
+    tools.id='textEditTools';
+    tools.className='text-edit-tools';
+    tools.style.left=box.style.left;
+    tools.style.top=(Math.max(0,r.top-rr.top-34))+'px';
+
+    const fontSel=document.createElement('select');
+    fontSel.className='text-edit-font';
+    textFontOptions().forEach((f)=>{
+      const o=document.createElement('option');
+      o.value=f;o.textContent=f;o.style.fontFamily=f;
+      if(f===(l.meta&&l.meta.font))o.selected=true;
+      fontSel.appendChild(o);
+    });
+    tools.appendChild(fontSel);
+
+    const sizeSlider=document.createElement('input');
+    sizeSlider.type='range';
+    sizeSlider.min='24';
+    sizeSlider.max='180';
+    sizeSlider.step='4';
+    sizeSlider.className='text-edit-size';
+    sizeSlider.value=String((l.meta&&l.meta.size)||104);
+    sizeSlider.title='Text size';
+    tools.appendChild(sizeSlider);
+
+    document.querySelector('.radar').appendChild(tools);
+
+    box.focus();
+    box.select();
+    let committed=false;
+    const commit=()=>{
+      if(committed)return;
+      committed=true;
+      const nv=box.value.trim()||'TEXT';
+      l.meta=l.meta||{};
+      l.meta.text=nv;
+      l.meta.font=fontSel.value;
+      l.meta.size=Math.max(24,Math.min(180,Number(sizeSlider.value)||104));
+      const svg=makeTextSvg(l.meta);
+      l.url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      l.el.querySelector('img').src=l.url;
+      l.name='Text - '+nv;
+      renderList();
+      sync();
+      box.remove();
+      tools.remove();
+      selId=null;
+      refreshSelectionBoxes();
+    };
+    const cancel=()=>{
+      committed=true;
+      box.remove();
+      tools.remove();
+    };
+    const focusStillInEditor=()=>document.activeElement===box||document.activeElement===fontSel||document.activeElement===sizeSlider;
+    fontSel.addEventListener('change',()=>{box.style.fontFamily=fontSel.value;});
+    sizeSlider.addEventListener('input',()=>{box.style.fontSize=Math.max(12,Math.min(48,Number(sizeSlider.value)/2.6))+'px';});
+    box.addEventListener('keydown',(ev)=>{if(ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();commit();}if(ev.key==='Escape'){cancel();}});
+    box.addEventListener('blur',()=>{setTimeout(()=>{if(focusStillInEditor())return;commit();},120);});
+    fontSel.addEventListener('blur',()=>{setTimeout(()=>{if(focusStillInEditor())return;commit();},120);});
+    sizeSlider.addEventListener('blur',()=>{setTimeout(()=>{if(focusStillInEditor())return;commit();},120);});
+  }
+
+  function removeSelectedLayer(filterFn){
+    const target=layers.find((l)=>l.id===selId);
+    if(!target)return false;
+    if(typeof filterFn==='function'&&!filterFn(target))return false;
+    target.el.remove();
+    layers=layers.filter((x)=>x.id!==target.id);
+    selId=null;
+    renderList();
+    sync();
+    return true;
+  }
+  function refreshSelectionBoxes(){
+    layers.forEach((l)=>l.el.classList.toggle('selected',l.id===selId&&!l.hidden));
+  }
+  document.getElementById('toolBuild').onclick=()=>{
+    buildPanel.classList.toggle('show');
+    document.getElementById('toolBuild').classList.toggle('on',buildPanel.classList.contains('show'));
+    refreshSelectionBoxes();
+  };
+  document.getElementById('buildClose').onclick=()=>{
+    buildPanel.classList.remove('show');
+    document.getElementById('toolBuild').classList.remove('on');
+    refreshSelectionBoxes();
+  };
+  document.getElementById('addGfx').onclick=()=>gfxFile.click();
+  gfxFile.onchange=(e)=>{const f=e.target.files[0];if(!f)return;addLayer(URL.createObjectURL(f),f.name);gfxFile.value='';};
+
+  function clipartName(raw){
+    return String(raw||'').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+  }
+
+  function clipartSrc(relPath){
+    const safeParts=String(relPath||'').split('/').map((part)=>encodeURIComponent(part));
+    return WSI_CLIPART_BASE+safeParts.join('/');
+  }
+
+  function addClipartByPath(relPath,name){
+    const src=clipartSrc(relPath);
+    const display=clipartName(name||relPath||'Clipart');
+    addLayer(src,'Clipart - '+display,{kind:'clipart',clipartPath:relPath,clipartName:display});
+  }
+
+  function filterClipart(){
+    const q=String((clipartSearchInput&&clipartSearchInput.value)||'').trim().toLowerCase();
+    if(!q)return clipartManifest.slice();
+    return clipartManifest.filter((it)=>{
+      const hay=[it.name,it.relPath,it.set].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  function renderClipartPage(){
+    if(!clipartGrid)return;
+    clipartFiltered=filterClipart();
+    const totalPages=Math.max(1,Math.ceil(clipartFiltered.length/CLIPART_PAGE_SIZE));
+    clipartPage=Math.max(1,Math.min(clipartPage,totalPages));
+    clipartGrid.innerHTML='';
+
+    if(!clipartFiltered.length){
+      const empty=document.createElement('div');
+      empty.className='clip-empty';
+      empty.textContent='No icons match this search.';
+      clipartGrid.appendChild(empty);
+    }else{
+      const start=(clipartPage-1)*CLIPART_PAGE_SIZE;
+      const pageItems=clipartFiltered.slice(start,start+CLIPART_PAGE_SIZE);
+      pageItems.forEach((item)=>{
+        const btn=document.createElement('button');
+        btn.type='button';
+        btn.className='clipbtn';
+        btn.dataset.relPath=item.relPath;
+        btn.dataset.name=item.name;
+        btn.innerHTML='<img src="'+clipartSrc(item.relPath)+'" alt="'+clipartName(item.name)+'" loading="lazy"><span class="nm">'+clipartName(item.name)+'</span><span class="set">'+String(item.set||'Set')+'</span>';
+        clipartGrid.appendChild(btn);
+      });
+    }
+
+    if(clipartCount)clipartCount.textContent=clipartFiltered.length+' icons';
+    if(clipartPageLabel)clipartPageLabel.textContent='Page '+clipartPage+' / '+totalPages;
+    if(clipartPrevPage)clipartPrevPage.disabled=clipartPage<=1;
+    if(clipartNextPage)clipartNextPage.disabled=clipartPage>=totalPages;
+  }
+
+  document.getElementById('toolClipart').onclick=()=>{
+    const open=!clipartPanel.classList.contains('show');
+    clipartPanel.classList.toggle('show',open);
+    document.getElementById('toolClipart').classList.toggle('on',open);
+    if(open)renderClipartPage();
+  };
+  document.getElementById('clipartClose').onclick=()=>{
+    clipartPanel.classList.remove('show');
+    document.getElementById('toolClipart').classList.remove('on');
+  };
+  document.querySelector('#clipartPanel .clipgrid').addEventListener('click',(e)=>{
+    const b=e.target.closest('.clipbtn');
+    if(!b)return;
+    addClipartByPath(b.dataset.relPath||'',b.dataset.name||'');
+  });
+  if(clipartSearchInput)clipartSearchInput.addEventListener('input',()=>{clipartPage=1;renderClipartPage();});
+  if(clipartPrevPage)clipartPrevPage.addEventListener('click',()=>{if(clipartPage<=1)return;clipartPage-=1;renderClipartPage();});
+  if(clipartNextPage)clipartNextPage.addEventListener('click',()=>{clipartPage+=1;renderClipartPage();});
+  renderClipartPage();
+
+  document.getElementById('toolText').onclick=()=>{
+    const meta={kind:'text',text:'TEXT',font:'Archivo',color:teleColor||'#ffffff'};
+    const svg=makeTextSvg(meta);
+    addLayer('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg),'Text',meta);
+    openTextEditor(layers[layers.length-1]);
+  };
+
+  if(warnTypeFilter)warnTypeFilter.addEventListener('change',renderAlertLists);
+  if(watchTypeFilter)watchTypeFilter.addEventListener('change',renderAlertLists);
+  if(reportTypeFilter)reportTypeFilter.addEventListener('change',renderReportList);
+  if(warnRangeBtn)warnRangeBtn.addEventListener('click',()=>{warnRangeMode=cycleRangeMode(warnRangeMode);renderRangeButtons();renderAlertLists();});
+  if(watchRangeBtn)watchRangeBtn.addEventListener('click',()=>{watchRangeMode=cycleRangeMode(watchRangeMode);renderRangeButtons();renderAlertLists();});
+  if(reportRangeBtn)reportRangeBtn.addEventListener('click',()=>{reportRangeMode=cycleRangeMode(reportRangeMode);renderRangeButtons();renderReportList();});
+  renderRangeButtons();
+
+  const toggleInfoFrame=document.getElementById('toggleInfoFrame');
+  function setAlertsTrayCollapsed(collapsed){
+    const info=document.querySelector('.info');
+    if(!info||!toggleInfoFrame)return;
+    info.classList.toggle('frame-hidden',collapsed);
+    app.classList.toggle('info-collapsed',collapsed);
+    toggleInfoFrame.setAttribute('aria-expanded',String(!collapsed));
+    toggleInfoFrame.querySelector('.ms').textContent=collapsed?'chevron_left':'chevron_right';
+    document.getElementById('vsplitWarn').style.display=collapsed?'none':'block';
+    document.getElementById('vsplitWatch').style.display=collapsed?'none':'block';
+    document.getElementById('splitR').style.display=collapsed?'none':'block';
+    setTimeout(()=>map.invalidateSize(),0);
+    applyReportMarkerVisibility();
+  }
+  if(toggleInfoFrame){
+    toggleInfoFrame.addEventListener('click',()=>{
+      const expanded=toggleInfoFrame.getAttribute('aria-expanded')==='true';
+      setAlertsTrayCollapsed(expanded);
+    });
+  }
+  const showAlertsBtn=document.getElementById('showAlertsBtn');
+  if(showAlertsBtn)showAlertsBtn.addEventListener('click',()=>setAlertsTrayCollapsed(false));
+
+  function addLayer(url,name,meta){
+    const id=++lid;
+    const el=document.createElement('div');
+    el.className='gfx selected';
+    el.dataset.id=id;
+    el.innerHTML='<img src="'+url+'"><div class="gfx-box"><div class="gfx-h nw"></div><div class="gfx-h n"></div><div class="gfx-h ne"></div><div class="gfx-h w"></div><div class="gfx-h e"></div><div class="gfx-h sw"></div><div class="gfx-h s"></div><div class="gfx-h se"></div><div class="gfx-rot"></div></div>';
+    gfxLayer.appendChild(el);
+    const rr=document.querySelector('.radar').getBoundingClientRect();
+    const lay={id,el,url,name:name||'Graphic '+id,pinned:false,hidden:false,moveWithMap:false,LL:null,T:{cx:rr.width/2,cy:rr.height/2,w:rr.width*0.4,rot:0},kind:(meta&&meta.kind)||'',meta:meta||null};
+    layers.push(lay);
+    applyT(lay);
+    wireLayer(lay);
+    select(id);
+    renderList();
+    sync();
+  }
+
+  function applyT(l){
+    if(l.moveWithMap&&l.LL){
+      const cp=map.latLngToContainerPoint([l.LL.lat,l.LL.lng]);
+      l.T.cx=cp.x;
+      l.T.cy=cp.y;
+    }
+    l.el.style.left=l.T.cx+'px';
+    l.el.style.top=l.T.cy+'px';
+    l.el.style.width=l.T.w+'px';
+    l.el.style.transform='translate(-50%,-50%) rotate('+l.T.rot+'deg)';
+    l.el.style.display=l.hidden?'none':'block';
+  }
+
+  function select(id){
+    selId=id;
+    refreshSelectionBoxes();
+  }
+
+  function emitMapWave(latlng){
+    if(!mapWaveLayer||!latlng)return;
+    const cp=map.latLngToContainerPoint(latlng);
+    const makeWave=()=>{
+      const w=document.createElement('div');
+      w.className='map-wave';
+      w.style.left=cp.x+'px';
+      w.style.top=cp.y+'px';
+      mapWaveLayer.appendChild(w);
+      w.addEventListener('animationend',()=>w.remove(),{once:true});
+    };
+    makeWave();
+    setTimeout(makeWave,120);
+  }
+
+  map.on('click',(e)=>{
+    if(!tele.classList.contains('active'))emitMapWave(e.latlng);
+    selId=null;
+    refreshSelectionBoxes();
+  });
+
+  function wireLayer(l){
+    const radarEl=document.querySelector('.radar');
+    function rp(e){const r=radarEl.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+    let mode=null,st=null;
+    l.el.addEventListener('mousedown',(e)=>{
+      select(l.id);renderList();
+      if(e.target.classList.contains('gfx-h')){mode='resize';st={...rp(e),T:{...l.T},h:[...e.target.classList].find((c)=>['nw','n','ne','w','e','sw','s','se'].includes(c))};}
+      else if(e.target.classList.contains('gfx-rot')){mode='rotate';const p=rp(e);st={a0:Math.atan2(p.y-l.T.cy,p.x-l.T.cx),r0:l.T.rot};}
+      else{mode='move';st={...rp(e),T:{...l.T}};}
+      e.preventDefault();e.stopPropagation();
+    });
+    l.el.addEventListener('dblclick',(e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      openTextEditor(l);
+    });
+    l.el.addEventListener('contextmenu',(e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      select(l.id);
+      renderList();
+      gfxMenuTargetId=l.id;
+      openMenu(gfxMenu,e.clientX,e.clientY,[{a:'delete',t:'Delete'}]);
+    });
+    window.addEventListener('mousemove',(e)=>{
+      if(mode==null||selId!==l.id)return;
+      const p=rp(e);
+      if(mode==='move'){l.T.cx=st.T.cx+(p.x-st.x);l.T.cy=st.T.cy+(p.y-st.y);}
+      else if(mode==='rotate'){l.T.rot=st.r0+(Math.atan2(p.y-l.T.cy,p.x-l.T.cx)-st.a0)*180/Math.PI;}
+      else if(mode==='resize'){const dx=p.x-st.x;const grow=st.h.includes('e')?dx:st.h.includes('w')?-dx:(st.h.includes('s')?dx:-dx);l.T.w=Math.max(40,st.T.w+grow);}
+      if(l.moveWithMap){
+        const ll=map.containerPointToLatLng([l.T.cx,l.T.cy]);
+        l.LL={lat:ll.lat,lng:ll.lng};
+      }
+      applyT(l);sync();
+    });
+    window.addEventListener('mouseup',()=>{mode=null;});
+  }
+
+  function renderList(){
+    layerList.innerHTML='';
+    [...layers].reverse().forEach((l)=>{
+      const row=document.createElement('div');
+      row.className='lyr'+(l.hidden?' hidden':'')+(l.pinned?' pinned':'');
+      row.innerHTML='<img class="thumb" src="'+l.url+'"><span class="nm">'+l.name+'</span>'+
+      '<span class="ic" data-a="map" title="Move with map"><span class="ms" style="color:'+(l.moveWithMap?'var(--blue)':'')+'">'+(l.moveWithMap?'map':'crop_free')+'</span></span>'+
+      '<span class="ic" data-a="pin"><span class="ms" style="color:'+(l.pinned?'var(--green)':'')+'">push_pin</span></span>'+
+      '<span class="ic" data-a="eye"><span class="ms">'+(l.hidden?'visibility_off':'visibility')+'</span></span>'+
+      '<span class="ic" data-a="del"><span class="ms">delete</span></span>';
+      row.addEventListener('click',(e)=>{
+        const ic=e.target.closest('.ic');
+        const a=ic&&ic.dataset.a;
+        if(a==='map'){
+          l.moveWithMap=!l.moveWithMap;
+          if(l.moveWithMap){
+            const ll=map.containerPointToLatLng([l.T.cx,l.T.cy]);
+            l.LL={lat:ll.lat,lng:ll.lng};
+          }
+        }
+        else if(a==='pin')l.pinned=!l.pinned;
+        else if(a==='eye'){l.hidden=!l.hidden;applyT(l);}
+        else if(a==='del'){l.el.remove();layers=layers.filter((x)=>x.id!==l.id);}
+        else select(l.id);
+        renderList();
+        sync();
+      });
+      layerList.appendChild(row);
+    });
+    refreshSelectionBoxes();
+  }
+  renderList();
+
+  const chan=new BroadcastChannel('stormcast-output');
+  function gfxState(){
+    return layers.filter((l)=>!l.hidden).map((l)=>{
+      if(l.moveWithMap&&l.LL){
+        const cp=map.latLngToContainerPoint([l.LL.lat,l.LL.lng]);
+        l.T.cx=cp.x;
+        l.T.cy=cp.y;
+      }
+      return {url:l.url,T:l.T,kind:l.kind||''};
+    });
+  }
+  function sync(){
+    const stamp=frameStamps[frameIdx];
+    const c=map.getCenter();
+    const sel=radarSites.get(currentRid);
+    const prodText=selectedProdName+' '+selectedTilt+'°';
+    const rr=document.querySelector('.radar').getBoundingClientRect();
+    chan.postMessage({
+      type:'state',
+      rid:currentRid,
+      product:currentProduct,
+      stamp,
+      theme,
+      prod:prodText,
+      site:currentRid,
+      loc:sel?sel.name:'',
+      clock:window._clockShort||'',
+      center:[c.lat,c.lng],
+      zoom:map.getZoom(),
+      radarOpacity,
+      radarFilter,
+      mapKey: 'carto-nolabels',
+      radarSize:[Math.max(1,Math.round(rr.width)),Math.max(1,Math.round(rr.height))],
+      layers:{
+        roads:document.getElementById('lyRoads').checked,
+        counties:document.getElementById('lyCounties').checked,
+        states:document.getElementById('lyStates').checked,
+        cities:document.getElementById('lyCities').checked,
+        warnings:document.getElementById('lyWarnings').checked,
+        watches:document.getElementById('lyWatches').checked
+      },
+      gfx:gfxState(),
+      tele:strokes,
+      drawShadow:drawShadow
+    });
+  }
+  chan.onmessage=(e)=>{if(e.data&&e.data.hello)sync();};
+  setInterval(sync,1000);
+
+  const OUTDOC='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>StormCast - Broadcast Output</title>'+ 
+  '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">'+
+  '<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>'+
+  '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;}#om{position:absolute;inset:0;}#gfx{position:absolute;inset:0;z-index:460;pointer-events:none;}#gfx .g{position:absolute;transform:translate(-50%,-50%);}#gfx .g img{display:block;width:100%;height:auto;}#teleOut{position:absolute;inset:0;z-index:455;pointer-events:none;}<\/style></head><body>'+
+  '<div id="om"></div><canvas id="teleOut"></canvas><div id="gfx"></div>'+
+  '<script>'+
+  'const m=L.map("om",{zoomControl:false,attributionControl:false,zoomSnap:.25,dragging:false,scrollWheelZoom:false,maxZoom:20,minZoom:3}).setView([41.32,-96.37],8);'+
+  'let baseDark=null,baseLight=null,curBase=null;'+
+  'const ensureBase=()=>{if(baseDark&&baseLight)return;if(baseDark)m.removeLayer(baseDark);if(baseLight)m.removeLayer(baseLight);baseDark=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}",{maxZoom:18,opacity:1});baseLight=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}",{maxZoom:18,opacity:1});curBase=null;};'+
+  'const setBase=(theme)=>{ensureBase();const next=baseDark;if(curBase===next)return;if(curBase)m.removeLayer(curBase);next.addTo(m);if(next.bringToBack)next.bringToBack();curBase=next;};'+
+  'L.circleMarker([41.3203,-96.3667],{radius:3,color:"#fff",weight:2,fillColor:"#5a9bf0",fillOpacity:1}).addTo(m);'+
+  'const roads=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",{subdomains:"abcd",opacity:0.35,maxZoom:18});'+
+  'const counties=L.tileLayer("https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/uscounties/{z}/{x}/{y}.png",{opacity:0.75,maxZoom:18});'+
+  'const states=L.tileLayer("https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/usstates/{z}/{x}/{y}.png",{opacity:0.8,maxZoom:18});'+
+  'const cities=L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",{subdomains:"abcd",opacity:0.22,maxZoom:18});'+
+  'const warnGeo=L.geoJSON(null,{style:{color:"#ff9f43",weight:2,fillOpacity:0.12}});'+
+  'const watchGeo=L.geoJSON(null,{style:{color:"#5a9bf0",weight:2,fillOpacity:0.1}});'+
+  'let radar=null,curStamp=null,last=null;'+
+  'const tele=document.getElementById("teleOut"),tctx=tele.getContext("2d"),gfx=document.getElementById("gfx");'+
+  'let animT=0;'+
+  'const layerOn=(ly,on)=>{if(on){if(!m.hasLayer(ly))ly.addTo(m);}else if(m.hasLayer(ly))m.removeLayer(ly);};'+
+  'const fit=()=>{const r=document.getElementById("om").getBoundingClientRect();tele.width=Math.max(1,Math.floor(r.width));tele.height=Math.max(1,Math.floor(r.height));renderTele();renderGfx();};'+
+  'window.addEventListener("resize",fit);'+
+  'const drawPath=(ctx,pts,w,col)=>{if(pts.length<2)return;ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();};'+
+  'const sample=(px,sp,cb)=>{if(px.length<2)return;let acc=0;const seg=[];for(let i=1;i<px.length;i++){const a=px[i-1],b=px[i],dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy);if(l<0.01)continue;seg.push({a,b,dx,dy,l});acc+=l;}if(!seg.length)return;const n=Math.max(1,Math.floor(acc/sp)+1);for(let i=0;i<n;i++){const d=((i+0.5)/n)*acc;let s=0;for(const g of seg){if(d<=s+g.l){const t=(d-s)/g.l,ux=g.dx/g.l,uy=g.dy/g.l,nx=-uy,ny=ux;cb(g.a.x+g.dx*t,g.a.y+g.dy*t,ux,uy,nx,ny,i);break;}s+=g.l;}}};'+
+  'let strokeBuf=document.createElement("canvas"),strokeBufCtx=strokeBuf.getContext("2d");'+
+  'const getStrokeBuffer=(w,h)=>{if(strokeBuf.width!==w||strokeBuf.height!==h){strokeBuf.width=w;strokeBuf.height=h;}else strokeBufCtx.clearRect(0,0,w,h);return strokeBufCtx;};'+
+  'const drawStrokeShapes=(ctx,s)=>{const p=(s.pts||[]).map((q)=>m.latLngToContainerPoint([q.lat,q.lng]));if(!p.length)return;const w=Math.max(2,Number(s.width||4));if(s.tool==="pen")drawPath(ctx,p,w,s.color||"#fff");else if(s.tool==="line"&&p[1])drawPath(ctx,[p[0],p[1]],w,s.color||"#fff");else if(s.tool==="circle"&&p[1]){ctx.strokeStyle=s.color||"#fff";ctx.lineWidth=w;ctx.beginPath();ctx.arc(p[0].x,p[0].y,Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),0,7);ctx.stroke();}else if(s.tool==="measure"&&p[1]){ctx.setLineDash([7,4]);drawPath(ctx,[p[0],p[1]],Math.max(1.4,Math.round(w*0.44)),"rgba(190,196,204,.92)");ctx.setLineDash([]);}else if(["coldfront","warmfront","stationaryfront","dryline"].includes(s.tool)){const fl=Math.max(2,Math.round(w*0.78)),fs=Math.max(4.8,w*1.35),sp=Math.max(18,Math.round(w*7.8));drawPath(ctx,p,fl,s.tool==="warmfront"?"#ff4b3b":s.tool==="coldfront"?"#2f6fff":s.tool==="dryline"?"#e8a13a":"#6b5fa6");const tri=(cx,cy,sz,ux,uy,nx,ny,col,side)=>{const sx=side>=0?nx:-nx,sy=side>=0?ny:-ny,tx=ux,ty=uy;const tipx=cx+sx*(sz*1.2),tipy=cy+sy*(sz*1.2),bx=cx-sx*(sz*0.15),by=cy-sy*(sz*0.15),p1x=bx+tx*(sz*0.82),p1y=by+ty*(sz*0.82),p2x=bx-tx*(sz*0.82),p2y=by-ty*(sz*0.82);ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(tipx,tipy);ctx.lineTo(p1x,p1y);ctx.lineTo(p2x,p2y);ctx.closePath();ctx.fill();};const semi=(cx,cy,r,ux,uy,nx,ny,col,side)=>{const sx=side>=0?nx:-nx,sy=side>=0?ny:-ny,ta=Math.atan2(uy,ux),ccx=cx+sx*(r*0.18),ccy=cy+sy*(r*0.18);ctx.fillStyle=col;ctx.beginPath();if(side>=0){ctx.arc(ccx,ccy,r,ta+Math.PI,ta,true);ctx.lineTo(ccx+r*Math.cos(ta),ccy+r*Math.sin(ta));}else{ctx.arc(ccx,ccy,r,ta,ta+Math.PI,true);ctx.lineTo(ccx+r*Math.cos(ta+Math.PI),ccy+r*Math.sin(ta+Math.PI));}ctx.closePath();ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=Math.max(2,Math.round(fl*0.95));ctx.beginPath();if(side>=0)ctx.arc(ccx,ccy,r,ta+Math.PI,ta,true);else ctx.arc(ccx,ccy,r,ta,ta+Math.PI,true);ctx.stroke();};if(s.tool==="coldfront")sample(p,sp,(cx,cy,ux,uy,nx,ny)=>tri(cx,cy,fs,ux,uy,nx,ny,"#2f6fff",-1));else if(s.tool==="warmfront"){const goingLeft=p[p.length-1].x<p[0].x;sample(p,sp,(cx,cy,ux,uy,nx,ny)=>semi(cx,cy,Math.max(4.8,fs*0.88),ux,uy,nx,ny,"#ff4b3b",goingLeft?1:-1));}else if(s.tool==="stationaryfront")sample(p,Math.max(16,sp-2),(cx,cy,ux,uy,nx,ny,i)=>{if(i%2===0)tri(cx,cy,fs,ux,uy,nx,ny,"#2f6fff",1);else semi(cx,cy,Math.max(4.8,fs*0.88),ux,uy,nx,ny,"#ff4b3b",-1);});else sample(p,Math.max(14,sp-10),(cx,cy,ux,uy,nx,ny)=>{ctx.strokeStyle="#f3c377";ctx.beginPath();ctx.arc(cx+nx*Math.max(3,w*0.8),cy+ny*Math.max(3,w*0.8),Math.max(2.6,w*0.62),0,7);ctx.stroke();});}else if(s.tool==="arrow"||s.tool==="aarrow"){if(p.length<2)return;drawPath(ctx,p,w,s.color||"#fff");const last=p[p.length-1],prev=p[p.length-2]||p[0];const a=Math.atan2(last.y-prev.y,last.x-prev.x),hl=16;ctx.fillStyle=s.color||"#fff";ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(last.x-hl*Math.cos(a-0.4),last.y-hl*Math.sin(a-0.4));ctx.lineTo(last.x-hl*Math.cos(a+0.4),last.y-hl*Math.sin(a+0.4));ctx.closePath();ctx.fill();if(s.tool==="aarrow"){let tot=0;for(let i=1;i<p.length;i++)tot+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);let d=(animT%1)*tot,mx=p[0].x,my=p[0].y;for(let i=1;i<p.length;i++){const seglen=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);if(d<=seglen||i===p.length-1){const t=seglen>0?Math.min(1,d/seglen):0;mx=p[i-1].x+(p[i].x-p[i-1].x)*t;my=p[i-1].y+(p[i].y-p[i-1].y)*t;break;}d-=seglen;}ctx.fillStyle=s.color||"#fff";ctx.beginPath();ctx.arc(mx,my,Math.max(4,w*0.9),0,7);ctx.fill();}}else if(p[1]){drawPath(ctx,[p[0],p[1]],w,s.color||"#fff");}};'+
+  'const drawStroke=(s)=>{const sh=last&&last.drawShadow;if(!sh||!sh.enabled){tctx.shadowColor="rgba(0,0,0,0)";tctx.shadowBlur=0;tctx.shadowOffsetX=0;tctx.shadowOffsetY=0;drawStrokeShapes(tctx,s);return;}const buf=getStrokeBuffer(tele.width,tele.height);buf.shadowColor="rgba(0,0,0,0)";buf.shadowBlur=0;buf.shadowOffsetX=0;buf.shadowOffsetY=0;drawStrokeShapes(buf,s);const c=String(sh.color||"#000").replace("#","");const h=(c.length===3?c.split("").map((x)=>x+x).join(""):c.padEnd(6,"0").slice(0,6));const r=parseInt(h.slice(0,2),16)||0,g=parseInt(h.slice(2,4),16)||0,b=parseInt(h.slice(4,6),16)||0;tctx.save();tctx.shadowColor="rgba("+r+","+g+","+b+","+Math.max(0,Math.min(1,Number(sh.opacity)||0))+")";tctx.shadowBlur=Math.max(0,Number(sh.blur)||0);tctx.shadowOffsetX=0;tctx.shadowOffsetY=Number(sh.offsetY)||0;tctx.drawImage(strokeBuf,0,0);tctx.restore();tctx.shadowColor="rgba(0,0,0,0)";tctx.shadowBlur=0;tctx.shadowOffsetX=0;tctx.shadowOffsetY=0;tctx.drawImage(strokeBuf,0,0);};'+
+  'const renderTele=()=>{tctx.clearRect(0,0,tele.width,tele.height);if(!last||!Array.isArray(last.tele))return;for(const s of last.tele)drawStroke(s);tctx.shadowColor="rgba(0,0,0,0)";tctx.shadowBlur=0;tctx.shadowOffsetX=0;tctx.shadowOffsetY=0;};'+
+  'const renderGfx=()=>{gfx.innerHTML="";if(!last||!Array.isArray(last.gfx))return;const rw=(last.radarSize&&last.radarSize[0])||tele.width,rh=(last.radarSize&&last.radarSize[1])||tele.height,sx=tele.width/Math.max(1,rw),sy=tele.height/Math.max(1,rh),s=Math.min(sx,sy);for(const g of last.gfx){const n=document.createElement("div");n.className="g";n.style.left=(g.T.cx*sx)+"px";n.style.top=(g.T.cy*sy)+"px";n.style.width=Math.max(20,g.T.w*s)+"px";n.style.transform="translate(-50%,-50%) rotate("+(g.T.rot||0)+"deg)";n.innerHTML="<img src=\\""+g.url+"\\">";gfx.appendChild(n);}};'+
+  'const refreshAlerts=()=>{Promise.all([fetch("https://api.weather.gov/alerts/active?status=actual&message_type=alert&event=Tornado%20Warning&event=Severe%20Thunderstorm%20Warning&event=Flash%20Flood%20Warning&event=Flood%20Warning").then((r)=>r.json()).catch(()=>({features:[]})),fetch("https://api.weather.gov/alerts/active?status=actual&message_type=alert&event=Tornado%20Watch&event=Severe%20Thunderstorm%20Watch").then((r)=>r.json()).catch(()=>({features:[]}))]).then((arr)=>{warnGeo.clearLayers();watchGeo.clearLayers();if(arr[0]&&Array.isArray(arr[0].features)&&arr[0].features.length)warnGeo.addData({type:"FeatureCollection",features:arr[0].features});if(arr[1]&&Array.isArray(arr[1].features)&&arr[1].features.length)watchGeo.addData({type:"FeatureCollection",features:arr[1].features});});};'+
+  'const ch=new BroadcastChannel("stormcast-output");ch.postMessage({hello:true});'+
+  'ch.onmessage=(e)=>{const d=e.data;if(!d||d.type!=="state")return;last=d;setBase(d.theme);m.setView(d.center,d.zoom,{animate:false});layerOn(roads,d.layers&&d.layers.roads);layerOn(counties,d.layers&&d.layers.counties);layerOn(states,d.layers&&d.layers.states);layerOn(cities,d.layers&&d.layers.cities);layerOn(warnGeo,d.layers&&d.layers.warnings);layerOn(watchGeo,d.layers&&d.layers.watches);if(d.stamp&&d.stamp!==curStamp){curStamp=d.stamp;const code=d.product||"N0B";const nl=L.tileLayer("https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::"+d.rid+"-"+code+"-"+d.stamp+"/{z}/{x}/{y}.png",{opacity:0,zIndex:300,maxZoom:18}).addTo(m);let o=0;const target=Math.max(0.2,Math.min(1,Number(d.radarOpacity)||0.85));const iv=setInterval(()=>{o+=0.2;nl.setOpacity(Math.min(target,o));if(o>=target){clearInterval(iv);const old=radar;radar=nl;if(radar&&radar.getContainer&&radar.getContainer())radar.getContainer().style.filter=d.radarFilter||"";if(old)setTimeout(()=>m.removeLayer(old),60);}},16);}else if(radar&&radar.getContainer&&radar.getContainer()){radar.setOpacity(Math.max(0.2,Math.min(1,Number(d.radarOpacity)||0.85)));radar.getContainer().style.filter=d.radarFilter||"";}renderTele();renderGfx();};'+
+  'setInterval(()=>{animT+=0.02;renderTele();},33);'+
+  'refreshAlerts();setInterval(refreshAlerts,5*60*1000);'+
+  'setTimeout(()=>{m.invalidateSize();fit();},80);'+
+  '<\/script></body></html>';
+
+  document.getElementById('bcastBtn').onclick=()=>{
+    const btn=document.getElementById('bcastBtn');
+    btn.classList.add('on');
+    const w=window.open('','stormcast_output','width=1280,height=720,left=50,top=50,menubar=no,toolbar=,location=no,status=no');
+    if(!w){
+      alert('Popup blocked - allow popups, then click Cast again.');
+      setTimeout(()=>btn.classList.remove('on'),250);
+      return;
+    }
+    castWinRef=w;
+    w.document.open();
+    w.document.write(OUTDOC);
+    w.document.close();
+    setTimeout(sync,500);
+    setTimeout(()=>btn.classList.remove('on'),900);
+  };
+
+  document.getElementById('bcastFullscreenBtn').onclick=()=>{
+    const bw=document.getElementById('bcastFullscreenBtn');
+    bw.classList.add('on');
+    let w=(castWinRef&&!castWinRef.closed)?castWinRef:null;
+    if(!w){
+      w=window.open('','stormcast_output','width=1280,height=720,left=50,top=50,menubar=no,toolbar=no,location=no,status=no');
+      if(w){
+        w.document.open();
+        w.document.write(OUTDOC);
+        w.document.close();
+      }
+    }
+    if(!w){
+      setTimeout(()=>bw.classList.remove('on'),400);
+      return;
+    }
+    castWinRef=w;
+    try{
+      const d=w.document;
+      if(d.fullscreenElement&&d.exitFullscreen)d.exitFullscreen();
+      else if(d.documentElement&&d.documentElement.requestFullscreen)d.documentElement.requestFullscreen();
+      w.focus();
+    }catch{}
+    setTimeout(()=>bw.classList.remove('on'),500);
+  };
+
+  function applyHoverDescriptors(){
+    document.querySelectorAll('button,.key,.toolbtn,.tb,.clipbtn,.setbtn,.setbtn2,.themebtn,.hidebtn,.iconbtn').forEach((el)=>{
+      if(el.hasAttribute('data-tip'))return;
+      if(el.getAttribute('title'))return;
+      const txt=(el.textContent||'').replace(/\s+/g,' ').trim();
+      if(txt)el.setAttribute('title',txt.slice(0,48));
+    });
+  }
+  applyHoverDescriptors();
+
+  (function initTooltips(){
+    const tip=document.createElement('div');
+    tip.className='stc-tip';
+    document.body.appendChild(tip);
+    function place(el){
+      const r=el.getBoundingClientRect();
+      tip.style.visibility='hidden';
+      tip.classList.add('show');
+      const tw=tip.offsetWidth,th=tip.offsetHeight;
+      let x=r.left+r.width/2-tw/2;
+      let y=r.top-th-8;
+      if(y<6)y=r.bottom+8;
+      x=Math.max(6,Math.min(window.innerWidth-tw-6,x));
+      tip.style.left=x+'px';
+      tip.style.top=y+'px';
+      tip.style.visibility='visible';
+    }
+    function show(el){
+      const txt=el.getAttribute('data-tip');
+      if(!txt)return;
+      tip.textContent=txt;
+      tip.style.borderLeftColor=el.getAttribute('data-tip-accent')||'var(--blue)';
+      place(el);
+    }
+    function hide(){tip.classList.remove('show');}
+    document.addEventListener('mouseover',(e)=>{
+      const el=e.target.closest('[data-tip]');
+      if(el)show(el);
+    });
+    document.addEventListener('mouseout',(e)=>{
+      const el=e.target.closest('[data-tip]');
+      if(el&&(!e.relatedTarget||!el.contains(e.relatedTarget)))hide();
+    });
+    document.addEventListener('mousedown',hide);
+    window.addEventListener('scroll',hide,true);
+    window.addEventListener('resize',hide);
+  })();
+
+  const savedTheme=safeStorage.getItem('stormcast.theme');
+  if(savedTheme==='light'||savedTheme==='dark'){
+    document.documentElement.dataset.theme=savedTheme;
+    theme=savedTheme;
+    map.removeLayer(base);
+    base=(theme==='light'?light:dark).addTo(map);
+  }
+  renderThemeIcon();
+  const savedRid=safeStorage.getItem('stormcast.rid');
+  const savedProduct=safeStorage.getItem('stormcast.product');
+  const savedTilt=safeStorage.getItem('stormcast.tilt')||'0.5';
+  const savedSpeed=Number(safeStorage.getItem('stormcast.speedIdx')||'1');
+  homeRid=safeStorage.getItem('stormcast.homeRid')||'';
+  if(savedRid)currentRid=savedRid;
+  if(homeRid)currentRid=homeRid;
+  if(savedProduct)currentProduct=savedProduct;
+  const inferred=inferProductTiltFromCode(currentProduct);
+  selectedProdName=inferred.prod;
+  selectedTilt=savedTilt||inferred.tilt;
+  applyProductTilt();
+  applyTiltButtons();
+  if(Number.isInteger(savedSpeed)&&savedSpeed>=0&&savedSpeed<speedMs.length){
+    speedIdx=savedSpeed;
+    document.getElementById('speedLbl').textContent=speedLbl[speedIdx];
+  }
+  if(safeStorage.getItem('stormcast.uiHidden')==='1'){
+    document.body.classList.add('ui-hidden');
+    document.getElementById('hideUiBtn').textContent='Show UI';
+    uiTip.classList.add('show');
+    clearTimeout(uiTipTimer);
+    uiTipTimer=setTimeout(()=>uiTip.classList.remove('show'),2500);
+  }
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='Escape'&&document.body.classList.contains('ui-hidden')){
+      document.body.classList.remove('ui-hidden');
+      document.getElementById('hideUiBtn').textContent='Hide UI';
+      safeStorage.setItem('stormcast.uiHidden','0');
+      uiTip.classList.remove('show');
+      setTimeout(()=>map.invalidateSize(),0);
+      setTimeout(()=>map.invalidateSize(),220);
+    }
+  });
+  function bootstrapClock(){
+    updateClock();
+    setInterval(updateClock,1000);
+  }
+  bootstrapClock();
+  loadRadarSites().catch(()=>loadRadar());
+  setInterval(loadRadar,60*1000);
+  applyTracks();
+})();
+</script>
+</body>
+</html>

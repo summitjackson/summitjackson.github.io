@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<title>🪩 StormCast Beta - v0.19 - Not for Public Distribution</title>
+<title>🪩 StormCast Beta - v0.23</title>
 <style>
   :root{--bg:#0c0d0e;--panel:#16181b;--panel2:#1c1f23;--line:#2c3036;--text:#e4e6e9;--sub:#8b929b;--blue:#5a9bf0;--green:#52c074;--red:#ff4d42;--amber:#e8a13a;--purple:#a878e8;--haz-tor:#ff4d42;--haz-stw:#ff9f43;--haz-flood-watch:#5a9bf0;--haz-stm-watch:#f0cc4c;}
   [data-theme="light"]{--bg:#cfd5dd;--panel:#e2e7ee;--panel2:#d8dee7;--line:#a8b4c2;--text:#151b22;--sub:#4a5665;--blue:#2f5fb0;--green:#2f7a4a;--red:#c22a1f;--amber:#9a6a1c;--purple:#6a3fae;}
@@ -232,7 +232,10 @@
   .grp{flex-shrink:0;display:flex;flex-direction:column;gap:4px;}
   .grp.loop{min-width:0;flex:1 1 100%;}
   .glabel{font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;text-align:center;}
-  .keys{display:flex;gap:5px;padding:5px;border-radius:4px;}
+  .keys{display:grid;gap:5px;padding:5px;border-radius:4px;justify-content:center;}
+  .grp.product .keys,.grp.layer .keys{grid-template-columns:repeat(5,72px);grid-template-rows:repeat(2,72px);}
+  .grp.views .keys{grid-template-columns:repeat(2,72px);grid-template-rows:repeat(2,72px);}
+  .grp.broadcast .keys{grid-template-columns:72px;grid-template-rows:repeat(2,72px);}
   .grp.product .keys{background:rgba(90,155,240,.07);border:1px solid rgba(90,155,240,.32);}
   .grp.product .glabel{color:var(--blue);}
   .grp.layer .keys{background:rgba(82,192,116,.07);border:1px solid rgba(82,192,116,.32);}
@@ -259,6 +262,8 @@
   .key.loop.on .ms{color:var(--amber);}
   .key.broadcast.on{border-color:var(--red);background:rgba(255,77,66,.2);box-shadow:0 0 10px rgba(255,77,66,.3);}
   .key.broadcast.on .ms{color:var(--red);}
+  .key.placeholder{cursor:default;pointer-events:none;opacity:.24;}
+  .key.placeholder:hover{transform:none;}
   .key.sm{width:52px;height:52px;font-size:8.5px;gap:2px;}
   .key.sm .ms{font-size:20px;}
   .key.flash{filter:brightness(1.16);transform:translateY(-1px);}
@@ -517,16 +522,28 @@
     <div class="deck-rows">
       <div class="row">
         <div class="grp product"><div class="glabel">Product</div><div class="keys">
-          <div class="key product on" data-prod="Reflectivity" data-tip="Base reflectivity (dBZ) — precipitation intensity" data-tip-accent="var(--blue)"><span class="ms">radar</span>Reflc</div>
-          <div class="key product" data-prod="Velocity" data-tip="Base velocity — motion toward/away from the radar" data-tip-accent="var(--blue)"><span class="ms">cached</span>Veloc</div>
-          <div class="key product" data-prod="Dual-Pol" data-tip="Dual-polarization — correlation coefficient" data-tip-accent="var(--blue)"><span class="ms">grain</span>D-Pol</div>
-          <div class="key product" data-prod="Precipitation" data-tip="Precipitation accumulation product" data-tip-accent="var(--blue)"><span class="ms">water_drop</span>Precp</div>
+          <div class="key product on" data-prod="Base Reflectivity" data-tip="Base Reflectivity" data-tip-accent="var(--blue)"><span class="ms">radar</span><center>Base Reflec</center></div>
+          <div class="key product" data-prod="Base Velocity" data-tip="Base Velocity" data-tip-accent="var(--blue)"><span class="ms">cycle</span><center>Base Veloc</center></div>
+          <div class="key product" data-prod="Storm-Relative Velocity" data-tip="Storm-Relative Velocity"    data-tip-accent="var(--blue)"><span class="ms">cloud_sync</span><center>SR Veloc</center></div>
+          <div class="key product" data-prod="Correlation Coefficient" data-tip="Correlation Coefficient"    data-tip-accent="var(--blue)"><span class="ms">lens_blur</span><center></center>Corr Coeff</center></div>
+          <div class="key product" data-prod="Composite Reflectivity" data-tip="Composite Reflectivity"     data-tip-accent="var(--blue)"><span class="ms">stacks</span><center>Comp Reflec</center></div>
+          <div class="key product" data-prod="Differential Reflectivity (ZDR)" data-tip="Differential Reflectivity (ZDR)" data-tip-accent="var(--blue)"><span class="ms">bubble_chart</span><center>Diff Reflec</center></div>
+          <div class="key product" data-prod="Spectrum Width" data-tip="Spectrum Width" data-tip-accent="var(--blue)"><span class="ms">airwave</span><center>Spec Width</center></div>
+          <div class="key product" data-prod="Vertically Integrated Liquid (VIL)" data-tip="Vertically Integrated Liquid (VIL)" data-tip-accent="var(--blue)"><span class="ms">cool_to_dry</span><center>VIL</center></div>
+          <div class="key product" data-prod="Echo Tops" data-tip="Echo Tops" data-tip-accent="var(--blue)"><span class="ms">cloud_upload</span><center>Echo Tops</center></div>
+          <div class="key product" data-prod="Precipitation Accumulation" data-tip="Precipitation Accumulation" data-tip-accent="var(--blue)"><span class="ms">water</span><center>1-Hr Precip</center></div>
         </div></div>
         <div class="grp layer"><div class="glabel">Layers</div><div class="keys">
-          <div class="key layer on" id="btnWarnLayer" data-tip="Show/hide active NWS warning polygons on the radar" data-tip-accent="var(--green)"><span class="ms">warning</span>Warn</div>
-          <div class="key layer on" id="btnCountyLayer" data-tip="Show/hide county boundary overlay" data-tip-accent="var(--green)"><span class="ms">map</span>Cnty</div>
-          <div class="key layer" id="btnRoadLayer" data-tip="Show/hide roadway overlay" data-tip-accent="var(--green)"><span class="ms">routes</span>Hwy</div>
-          <div class="key layer on" id="btnCityLayer" data-tip="Show/hide city location labels overlay" data-tip-accent="var(--green)"><span class="ms">my_location</span>Trk</div>
+ 	        <div class="key layer on" id="btnWarnLayer"   data-tip="Show/hide radar overlay" data-tip-accent="var(--green)"><span class="ms">cell_tower</span>Warn</div>
+          <div class="key layer on" id="btnCountyLayer" data-tip="Show/hide active NWS warning polygons on the radar" data-tip-accent="var(--green)"><span class="ms">warning</span>Warnings</div>
+          <div class="key layer on" id="btnRoadLayer"   data-tip="Show/hide active NWS watch polygons on the radar" data-tip-accent="var(--green)"><span class="ms">error</span>Watches</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide storm reports" data-tip-accent="var(--green)"><span class="ms">maps_ugc</span>Reports</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide mesoscale discussions" data-tip-accent="var(--green)"><span class="ms">chat</span>Discussions</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide city names" data-tip-accent="var(--green)"><span class="ms">location_city</span>Cities</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide roadways" data-tip-accent="var(--green)"><span class="ms">road</span>Roads</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide state borders" data-tip-accent="var(--green)"><span class="ms">border_top</span>States</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide county borders" data-tip-accent="var(--green)"><span class="ms">border_bottom</span>Counties</div>
+          <div class="key layer on" id="btnCityLayer"   data-tip="Show/hide NWS county watch areas (CWAs)" data-tip-accent="var(--green)"><span class="ms">activity_zone</span>CWAs</div>
         </div></div>
         <div class="grp views"><div class="glabel">Views</div><div class="keys">
           <div class="key views on" data-tip="Saved map view 1 — click to jump, right-click to set/rename" data-tip-accent="var(--purple)"><span class="g">1</span>V1</div>
@@ -535,8 +552,8 @@
           <div class="key views" data-tip="Saved map view 4 — click to jump, right-click to set/rename" data-tip-accent="var(--purple)"><span class="g">4</span>V4</div>
         </div></div>
         <div class="grp broadcast"><div class="glabel">Broadcast</div><div class="keys">
-          <div class="key broadcast" id="bcastBtn" data-tip="Open the broadcast output window for OBS/Streamlabs capture" data-tip-accent="var(--red)"><span class="ms">cast</span>Open</div>
-          <div class="key broadcast" id="bcastFullscreenBtn" data-tip="Fullscreen the broadcast output window" data-tip-accent="var(--red)"><span class="ms">fullscreen</span>Fullscreen</div>
+          <div class="key broadcast" id="bcastBtn"            data-tip="Open the broadcast output window for OBS/Streamlabs capture"  data-tip-accent="var(--red)"> <span class="ms">cast       </span>Open</div>
+          <div class="key broadcast" id="bcastFullscreenBtn"  data-tip="Fullscreen the broadcast output window"                       data-tip-accent="var(--red)"> <span class="ms">fullscreen </span>Fullscreen</div>
         </div></div>
       </div>
     </div>
@@ -2924,7 +2941,7 @@
   document.getElementById('bcastBtn').onclick=()=>{
     const btn=document.getElementById('bcastBtn');
     btn.classList.add('on');
-    const w=window.open('','stormcast_output','width=1280,height=720,left=50,top=50,menubar=no,toolbar=no,location=no,status=no');
+    const w=window.open('','stormcast_output','width=1280,height=720,left=50,top=50,menubar=no,toolbar=,location=no,status=no');
     if(!w){
       alert('Popup blocked - allow popups, then click Cast again.');
       setTimeout(()=>btn.classList.remove('on'),250);

@@ -1,1 +1,636 @@
-# summitjackson.github.io
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StormCast Beta - V0.20 - Not for Public Distribution</title>
+    <!-- Material Symbols for NWS Icon Integration -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    
+    <style>
+        /* ==========================================================================
+           STORMCAST PHASE 2 & 3 UI REFACTORING
+           ========================================================================== */
+        
+        :root {
+            --bg-base: #000000;
+            --bg-panel: #111111;
+            --bg-toolbar: #1a1a1a;
+            --text-main: #ffffff;
+            --text-muted: #777777;
+            --border-color: #3a3a3a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Application Layout Scaffolding --- */
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .left-sidebar {
+            width: 320px;
+            background-color: var(--bg-toolbar);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .main-viewport {
+            flex: 1;
+            position: relative;
+            background-color: var(--bg-base);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #mainDrawingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            z-index: 5;
+        }
+
+        /* --- E-I & E-II: Product & Layers Toolbars - 2x4 Box Setup --- */
+        .product-grid,
+        .layers-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, auto);
+            gap: 6px;
+            padding: 4px;
+        }
+
+        /* --- E-III: Views Toolbar - 2x2 Box Setup --- */
+        .views-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, auto);
+            gap: 6px;
+            padding: 4px;
+        }
+
+        /* --- F-II.2: Map Position Module Layout Cleanup --- */
+        .map-position-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .map-position-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* F-II.1: Text Input Adjustments (+1pt size increase) */
+        .map-position-container input[type="text"],
+        .map-position-container input[type="number"] {
+            font-size: 14px;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            text-align: center;
+            width: 100%;
+        }
+
+        /* --- F-III.4: Tilt Selector Width Optimization --- */
+        .tilt-selector-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            padding: 10px;
+        }
+
+        .tilt-buttons-row {
+            display: flex;
+            width: 100%;
+            gap: 4px;
+        }
+
+        .tilt-buttons-row button {
+            flex: 1;
+            font-size: 13px;
+            padding: 6px 0;
+            text-align: center;
+            background-color: #2a2a2a;
+            color: white;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        
+        .tilt-buttons-row button:hover {
+            background-color: #3a3a3a;
+        }
+
+        /* --- D12 & D13: Alerts Module Layout & Minimize Mechanics --- */
+        .alerts-reports-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .alerts-reports-wrapper.collapsed {
+            width: 48px !important;
+        }
+
+        .alerts-panel-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 2px;
+            background-color: #0c0c0c;
+        }
+
+        .alerts-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            transition: flex 0.4s ease, transform 0.4s ease;
+            overflow: hidden;
+            background-color: var(--bg-panel);
+        }
+
+        .alerts-section.minimized {
+            flex: 0 0 40px !important;
+        }
+
+        .alerts-title-bar {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            background-color: #161616;
+            cursor: pointer;
+            user-select: none;
+            font-weight: bold;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* D5: Reduction of 'No Active Watches' text size */
+        .no-alerts-placeholder {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 15px;
+        }
+
+        /* --- General UI Components --- */
+        .toolbar-section {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .toolbar-btn {
+            background-color: #2a2a2a;
+            color: white;
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .toolbar-btn:hover { background-color: #3a3a3a; }
+
+        .clock-container {
+            padding: 15px 10px;
+            text-align: center;
+            background-color: #0a0a0a;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #clockDisplayLarge {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 2px;
+            color: #00ffcc;
+        }
+
+        #clockModeIndicator {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Warning Flash for invalid tool use */
+        .warning-flash {
+            animation: flash-red 0.6s ease-out;
+        }
+
+        @keyframes flash-red {
+            0% { background-color: rgba(255, 0, 0, 0.3); }
+            100% { background-color: transparent; }
+        }
+
+        /* Tooltip Container */
+        #canvasControlTooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 100;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 1px solid #444;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Left Operational Sidebar -->
+        <div class="left-sidebar">
+            
+            <!-- Clock Module -->
+            <div class="clock-container" onclick="StormCastEngine.cycleClockEngineMode()" title="Click to cycle Timezones">
+                <div id="clockDisplayLarge">00:00:00 Z</div>
+                <div id="clockModeIndicator">UTC</div>
+            </div>
+
+            <!-- Drawing Controls (B1, B2, B3) -->
+            <div class="toolbar-section" id="drawingToolbar">
+                <div style="margin-bottom: 8px; font-size: 12px; font-weight: bold;">Canvas Controls</div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="toolbar-btn" id="btnToggleDraw" style="flex: 1;">Draw: OFF</button>
+                    <button class="toolbar-btn" onclick="StormCastEngine.undoLastAction()">Undo</button>
+                    <button class="toolbar-btn" onclick="StormCastEngine.executeGlobalCanvasClear()">Clear All</button>
+                </div>
+            </div>
+
+            <!-- Map Positioning (F-II) -->
+            <div class="map-position-container">
+                <div style="font-size: 12px; font-weight: bold; margin-bottom: 4px;">Map Position</div>
+                <div class="map-position-row">
+                    <input type="text" placeholder="LAT: 00.0000" />
+                    <input type="text" placeholder="LON: 00.0000" />
+                </div>
+            </div>
+
+            <!-- Tilt Selectors (F-III.4) -->
+            <div class="tilt-selector-container">
+                <div style="font-size: 12px; font-weight: bold; margin-bottom: 4px;">Radar Tilt</div>
+                <div class="tilt-buttons-row">
+                    <button>0.5°</button>
+                    <button>0.9°</button>
+                    <button>1.3°</button>
+                    <button>1.8°</button>
+                </div>
+            </div>
+
+            <!-- Alerts Sidebar (D12/D13) -->
+            <div class="alerts-reports-wrapper">
+                <div class="alerts-panel-container">
+                    <div class="alerts-section" id="activeAlertsSection">
+                        <div class="alerts-title-bar" onclick="document.getElementById('activeAlertsSection').classList.toggle('minimized')">
+                            <span>Active Warnings</span>
+                            <span class="material-symbols-outlined" style="font-size: 18px;">expand_more</span>
+                        </div>
+                        <div id="alertsContainer">
+                            <!-- D5: No Active Watches Placeholder -->
+                            <div class="no-alerts-placeholder">No Active Watches or Warnings</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Main Radar/Drawing Viewport -->
+        <div class="main-viewport" id="viewportContainer">
+            <canvas id="mainDrawingCanvas"></canvas>
+            
+            <!-- Map Base Placeholder -->
+            <div style="color: #333; font-size: 24px; user-select: none;">[ RADAR MAP RENDER LAYER ]</div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        /**
+         * StormCast Data Lookup System
+         * Maps Tables 5, 7, 8, 9, 10, and 11 into production schemas
+         */
+        const StormCastDataMaps = {
+            DopplerProducts: {
+                "BASE_REFLECT": { label: "Base Reflect", name: "Base Reflectivity", icon: "radar", level: "II", prefer: "II", lvl2Icon: "looks_two", lvl3Icon: "looks_three" },
+                "COMP_REFLECT": { label: "Comp Reflect", name: "Composite Reflectivity", icon: "stacks", level: "III", prefer: "III", lvl2Icon: "", lvl3Icon: "looks_three" },
+                "BASE_VELO":    { label: "Base Velo",    name: "Base Velocity", icon: "autorenew", level: "II/III", prefer: "II", lvl2Icon: "looks_two", lvl3Icon: "looks_three" },
+                "SR_VELO":      { label: "SR Velo",      name: "Storm Relative Velocity", icon: "cloud_sync", level: "III", prefer: "III", lvl2Icon: "looks_two", lvl3Icon: "looks_three" },
+                "SPECT_WIDTH":  { label: "Spect Width",  name: "Spectrum Width", icon: "airwave", level: "II/III", prefer: "II", lvl2Icon: "looks_two", lvl3Icon: "looks_three" },
+                "DIFF_REFLECT": { label: "Diff Reflect", name: "Differential Reflectivity", icon: "bubble_chart", level: "II/III", prefer: "II", lvl2Icon: "looks_two", lvl3Icon: "looks_three" },
+                "CORR_COEFF":   { label: "Corr Coeff",   name: "Correlation Coefficient", icon: "lens_blur", level: "II/III", prefer: "II", lvl2Icon: "looks_two", lvl3Icon: "looks_three" },
+                "1HR_PRECIP":   { label: "1-Hr Precip",  name: "Precipitation Accumulation", icon: "water", level: "III", prefer: "III", lvl2Icon: "", lvl3Icon: "looks_three" },
+                "VIL":          { label: "VIL",          name: "Vertically Integrated Liquid", icon: "cool_to_dry", level: "III", prefer: "III", lvl2Icon: "looks_two", lvl3Icon: "looks_three" },
+                "ECHO_TOPS":    { label: "Echo Tops",    name: "Echo Tops", icon: "cloud_upload", level: "III", prefer: "III", lvl2Icon: "", lvl3Icon: "looks_three" }
+            },
+            PolygonPalettes: {
+                "Tornado Warning":        { hex: "#FF0000", defaultShow: true,  category: "Severe",      tab: "Warnings" },
+                "Severe T-Storm Warning": { hex: "#FF9900", defaultShow: true,  category: "Severe",      tab: "Warnings" },
+                "Flash Flood Warning":    { hex: "#00FF00", defaultShow: false, category: "Flooding",    tab: "Warnings" },
+                "Flood Warning":          { hex: "#009900", defaultShow: false, category: "Flooding",    tab: "Warnings" },
+                "Blizzard Warning":       { hex: "#FF00FF", defaultShow: false, category: "Winter",      tab: "Warnings" },
+                "Fire Weather Warning":   { hex: "#FF0000", defaultShow: false, category: "Fire",        tab: "Warnings" },
+                "Hurricane Warning":      { hex: "#FF00FF", defaultShow: false, category: "Tropical",    tab: "Warnings" },
+                "Ice Storm Warning":      { hex: "#FF80FF", defaultShow: false, category: "Winter",      tab: "Warnings" },
+                "Tornado Watch":          { hex: "#FFFF00", defaultShow: true,  category: "Severe",      tab: "Watches" },
+                "Severe Thunderstorm Watch":{ hex: "#FFCC00", defaultShow: true,  category: "Severe",    tab: "Watches" },
+                "Flash Flood Watch":      { hex: "#CCFF66", defaultShow: false, category: "Flooding",    tab: "Watches" },
+                "Flood Watch":            { hex: "#00FF00", defaultShow: false, category: "Flooding",    tab: "Watches" },
+                "Winter Storm Watch":     { hex: "#9966CC", defaultShow: false, category: "Winter",      tab: "Watches" }
+            },
+            HighRiskTags: {
+                "PDS Tornado Warning":    { base: "Tornado Warning",      hex: "#FF0000", action: "flash_outline", defaultShow: true },
+                "Tornado Emergency":      { base: "Tornado Warning",      hex: "#FF0000", action: "flash_outline", defaultShow: true },
+                "Cons Severe T-Storm":    { base: "Severe T-Storm Warning",hex: "#FF9900", action: "flash_outline", defaultShow: true },
+                "Flash Flood Emergency":  { base: "Flash Flood Warning",  hex: "#00FF00", action: "flash_outline", defaultShow: false },
+                "Sig Flash Flood":        { base: "Flash Flood Warning",  hex: "#00FF00", action: "flash_outline", defaultShow: false },
+                "Major Flood":            { base: "Flood Warning",        hex: "#009900", action: "flash_outline", defaultShow: false }
+            },
+            ReportTypes: {
+                "Tornado":       { category: "Severe", bg: "#FF0000", fg: "White", icon: "tornado",         defaultShow: true },
+                "Funnel Cloud":  { category: "Severe", bg: "#e06666", fg: "White", icon: "tornado",         defaultShow: true },
+                "Hail":          { category: "Severe", bg: "#FF9900", fg: "White", icon: "scatter_plot",    defaultShow: true },
+                "Wind Damage":   { category: "Severe", bg: "#CC99CC", fg: "Black", icon: "air",             defaultShow: true }
+            }
+        };
+
+        /**
+         * StormCast Active Alert Parsing Module
+         */
+        const StormCastAlertsProcessor = (() => {
+            function normalizeNwsTextStrings(rawText) {
+                if (!rawText) return "";
+                let cleaned = rawText;
+                cleaned = cleaned.replace(/Severe T-storm/gi, "Severe T-Storm");
+                cleaned = cleaned.replace(/Thunderstorm/gi, "T-Storm");
+                return cleaned;
+            }
+
+            function generateAlertTemplateHTML(alertObj) {
+                const cleanType = normalizeNwsTextStrings(alertObj.type);
+                const cleanCounties = normalizeNwsTextStrings(alertObj.counties.join(', '));
+                const minutesRemaining = calculateMinutesUntilExpiration(alertObj.expiresTimestamp);
+                
+                return `
+                    <div class="alert-card-node" style="border-left: 4px solid ${alertObj.colorHex}; margin: 5px; padding: 10px; background: #1a1a1a;" data-id="${alertObj.id}">
+                        <div style="font-weight: bold; color: ${alertObj.colorHex};">${cleanType} ${alertObj.specialTag ? `(${alertObj.specialTag})` : ''}</div>
+                        <div style="font-size: 11px; margin-top: 4px;">${cleanCounties}</div>
+                        <div style="font-size: 11px; color: #aaa; margin-top: 4px; display: flex; justify-content: space-between;">
+                            <span>Exp: ${alertObj.localExpirationString}</span>
+                            <span>${minutesRemaining} min</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function calculateMinutesUntilExpiration(targetEpochMs) {
+                const diffMs = targetEpochMs - Date.now();
+                if (diffMs <= 0) return 0;
+                return Math.floor(diffMs / 60000);
+            }
+
+            return {
+                normalizeNwsTextStrings,
+                generateAlertTemplateHTML
+            };
+        })();
+
+        /**
+         * StormCast Beta - Operational Core Execution Logic Module
+         */
+        const StormCastEngine = (() => {
+            const state = {
+                isDrawingEnabled: false,
+                activeDrawTool: 'freehand',
+                activeColor: '#FF0000',
+                brushSize: 15,
+                historyStack: [],
+                currentClockMode: 'UTC',
+                activeRadarSite: 'ARX'
+            };
+
+            let mainCanvas, mainCtx, castWindow, castCanvas, castCtx;
+            let isDrawing = false;
+            let lastX = 0, lastY = 0;
+
+            function init() {
+                mainCanvas = document.getElementById('mainDrawingCanvas');
+                mainCtx = mainCanvas.getContext('2d');
+                
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+
+                setupDrawingListeners();
+                startClockDaemon();
+                setupUIHooks();
+            }
+
+            function resizeCanvas() {
+                const container = document.getElementById('viewportContainer');
+                mainCanvas.width = container.clientWidth;
+                mainCanvas.height = container.clientHeight;
+                
+                // Redraw history if exists on resize
+                if(state.historyStack.length > 0) {
+                    const img = new Image();
+                    img.onload = () => { mainCtx.drawImage(img, 0, 0); };
+                    img.src = state.historyStack[state.historyStack.length - 1];
+                }
+            }
+
+            function setupUIHooks() {
+                const toggleBtn = document.getElementById('btnToggleDraw');
+                toggleBtn.addEventListener('click', () => {
+                    state.isDrawingEnabled = !state.isDrawingEnabled;
+                    toggleBtn.innerText = `Draw: ${state.isDrawingEnabled ? 'ON' : 'OFF'}`;
+                    toggleBtn.style.backgroundColor = state.isDrawingEnabled ? '#0066cc' : '#2a2a2a';
+                });
+            }
+
+            function verifyToolAccess(requestedAction) {
+                if (!state.isDrawingEnabled && requestedAction !== 'delete' && requestedAction !== 'undo') {
+                    triggerToolbarWarning();
+                    return false;
+                }
+                return true;
+            }
+
+            function triggerToolbarWarning() {
+                const toolbar = document.getElementById('drawingToolbar');
+                toolbar.classList.add('warning-flash');
+                showNotificationTooltip("Enable drawing to use these tools");
+                setTimeout(() => { toolbar.classList.remove('warning-flash'); }, 600);
+            }
+
+            function showNotificationTooltip(message) {
+                let tip = document.getElementById('canvasControlTooltip');
+                if (!tip) {
+                    tip = document.createElement('div');
+                    tip.id = 'canvasControlTooltip';
+                    document.body.appendChild(tip);
+                }
+                tip.innerText = message;
+                tip.style.display = 'block';
+                setTimeout(() => { tip.style.display = 'none'; }, 2500);
+            }
+
+            function setupDrawingListeners() {
+                const startDraw = (e) => {
+                    if (!verifyToolAccess('draw')) return;
+                    isDrawing = true;
+                    [lastX, lastY] = [e.offsetX, e.offsetY];
+                    saveHistoryState();
+                };
+
+                const draw = (e) => {
+                    if (!isDrawing || !state.isDrawingEnabled) return;
+                    
+                    requestAnimationFrame(() => {
+                        mainCtx.beginPath();
+                        mainCtx.moveTo(lastX, lastY);
+                        mainCtx.lineTo(e.offsetX, e.offsetY);
+                        mainCtx.strokeStyle = state.activeColor;
+                        mainCtx.lineWidth = state.brushSize;
+                        mainCtx.lineCap = 'round';
+                        mainCtx.lineJoin = 'round';
+                        mainCtx.stroke();
+                        [lastX, lastY] = [e.offsetX, e.offsetY];
+                        mirrorToCastWindow();
+                    });
+                };
+
+                const stopDraw = () => { isDrawing = false; };
+
+                mainCanvas.addEventListener('mousedown', startDraw);
+                mainCanvas.addEventListener('mousemove', draw);
+                mainCanvas.addEventListener('mouseup', stopDraw);
+                mainCanvas.addEventListener('mouseout', stopDraw);
+            }
+
+            function mirrorToCastWindow() {
+                if (castWindow && !castWindow.closed && castCanvas) {
+                    requestAnimationFrame(() => {
+                        castCtx.clearRect(0, 0, castCanvas.width, castCanvas.height);
+                        castCtx.drawImage(mainCanvas, 0, 0);
+                    });
+                }
+            }
+
+            function undoLastAction() {
+                if (state.historyStack.length > 0) {
+                    const previousState = state.historyStack.pop();
+                    const img = new Image();
+                    img.onload = () => {
+                        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+                        mainCtx.drawImage(img, 0, 0);
+                        mirrorToCastWindow();
+                    };
+                    img.src = previousState;
+                } else {
+                    mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+                    mirrorToCastWindow();
+                }
+            }
+
+            function executeGlobalCanvasClear() {
+                mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+                state.historyStack = [];
+                mirrorToCastWindow();
+            }
+
+            function saveHistoryState() {
+                if (state.historyStack.length > 25) state.historyStack.shift();
+                state.historyStack.push(mainCanvas.toDataURL());
+            }
+
+            function startClockDaemon() {
+                const largeClockElement = document.getElementById('clockDisplayLarge');
+                const clockIndicatorElement = document.getElementById('clockModeIndicator');
+
+                setInterval(() => {
+                    const now = new Date();
+                    let displayTimeStr = "";
+                    
+                    switch (state.currentClockMode) {
+                        case 'UTC':
+                            displayTimeStr = now.toISOString().substring(11, 19) + " Z";
+                            break;
+                        case 'LOCAL':
+                            displayTimeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            break;
+                        case 'RADAR':
+                        default:
+                            displayTimeStr = getCalculatedRadarTime(now, state.activeRadarSite);
+                            break;
+                    }
+                    
+                    largeClockElement.innerText = displayTimeStr;
+                    clockIndicatorElement.innerText = state.currentClockMode;
+                }, 1000);
+            }
+
+            function cycleClockEngineMode() {
+                const modes = ['UTC', 'LOCAL', 'RADAR'];
+                let nextIdx = (modes.indexOf(state.currentClockMode) + 1) % modes.length;
+                state.currentClockMode = modes[nextIdx];
+                showNotificationTooltip(`Clock source switched to: ${state.currentClockMode}`);
+            }
+
+            function getCalculatedRadarTime(baseDate, siteCode) {
+                // Fallback mapping structural time zones
+                return baseDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + " RAD";
+            }
+
+            return {
+                init,
+                state,
+                undoLastAction,
+                executeGlobalCanvasClear,
+                cycleClockEngineMode
+            };
+        })();
+
+        // Bootstrap Core
+        document.addEventListener("DOMContentLoaded", () => {
+            StormCastEngine.init();
+        });
+    </script>
+</body>
+</html>

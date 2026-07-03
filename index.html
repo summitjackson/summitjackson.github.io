@@ -33,24 +33,30 @@
 
         h1 {
             text-align: center;
-            margin: 0;
+            margin: 0 0 30px 0;
             color: #222;
         }
 
         h2 {
-            margin-top: 0;
-            margin-bottom: 20px;
+            text-align: left;
+            margin: 0 0 20px 0;
             color: #444;
             border-bottom: 2px solid #e5e5e5;
             padding-bottom: 8px;
         }
 
-        ul {
-            list-style-type: disc;
-            padding-left: 25px;
+        /* Left-align the entire downloads section */
+        .downloads {
+            text-align: left;
         }
 
-        li {
+        .downloads ul {
+            list-style-type: disc;
+            padding-left: 25px;
+            margin: 0;
+        }
+
+        .downloads li {
             margin-bottom: 25px;
             line-height: 1.6;
         }
@@ -66,9 +72,9 @@
         }
 
         .description {
+            margin-top: 4px;
             font-size: 0.95em;
             color: #666;
-            margin-top: 4px;
         }
 
         footer {
@@ -90,31 +96,33 @@
 
     <h1>Summit x Jackson</h1>
 
-    <h2>StormCast Downloads</h2>
+    <div class="downloads">
 
-    <ul>
+        <h2>StormCast Downloads</h2>
 
-        <li>
-            <a href="https://summitjackson.github.io/stormcast_v0.21.html">
-                StormCast Beta — Latest Stable Build
-            </a>
+        <ul>
+            <li>
+                <a href="https://summitjackson.github.io/stormcast_v0.21.html">
+                    StormCast Beta — Latest Stable Build
+                </a>
 
-            <div class="description">
-                Currently not polling live radar data.
-            </div>
-        </li>
+                <div class="description">
+                    Currently not polling live radar data.
+                </div>
+            </li>
 
-        <li>
-            <a href="https://summitjackson.github.io/stormcast_v0.23_wb.html">
-                StormCast Beta — Latest Unstable Build
-            </a>
+            <li>
+                <a href="https://summitjackson.github.io/stormcast_v0.23_wb.html">
+                    StormCast Beta — Latest Unstable Build
+                </a>
 
-            <div class="description">
-                Buttons are currently non-functional.
-            </div>
-        </li>
+                <div class="description">
+                    Buttons are currently non-functional.
+                </div>
+            </li>
+        </ul>
 
-    </ul>
+    </div>
 
     <footer>
         &copy; 2026 Summit x Jackson

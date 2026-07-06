@@ -1052,7 +1052,8 @@ License: MIT
   });
 
   const KNOWN_HEADERS = new Set([
-    "full address","address","street address","street","city","state","zip","zip code","postal code",
+    "full address","address","street address","street","street address 1","street address 2",
+    "address line 1","address line 2","address 1","address 2","city","state","zip","zip code","postal code",
     "customer name","name","priority assigned","priority","priority assigned time",
     "last check-in","last check in","next check-in","next check in","latitude","lat","longitude","lng","lon",
     "geocode status","status","property type","type","commercial/residential","category"
@@ -1091,17 +1092,54 @@ License: MIT
   }
 
   function normalizeCsvRows(rows){
+    function normalizeHeader(h){
+      return (h || "").replace(/\s+/g, ' ').trim().toLowerCase();
+    }
     function getCol(row, names){
-      for(const n of names){
-        if(row[n] !== undefined && row[n] !== null && String(row[n]).trim() !== "") return String(row[n]).trim();
+      const normNames = names.map(normalizeHeader);
+      const rowKeys = Object.keys(row);
+      for(const key of rowKeys){
+        const nk = normalizeHeader(key);
+        if(normNames.includes(nk)){
+          const val = row[key];
+          if(val !== undefined && val !== null && String(val).trim() !== "") return String(val).trim();
+        }
+      }
+      for(const key of rowKeys){
+        const nk = normalizeHeader(key);
+        if(normNames.some(n => n && nk.includes(n))){
+          const val = row[key];
+          if(val !== undefined && val !== null && String(val).trim() !== "") return String(val).trim();
+        }
       }
       return "";
     }
+    function getColsJoined(row, phrases, excludePhrases){
+      const norm = phrases.map(normalizeHeader);
+      const exclude = (excludePhrases || []).map(normalizeHeader);
+      return Object.keys(row)
+        .filter(key => {
+          const nk = normalizeHeader(key);
+          if(exclude.some(ex => nk.includes(ex))) return false;
+          return norm.some(n => nk.includes(n));
+        })
+        .sort()
+        .map(key => (row[key] || "").toString().trim())
+        .filter(Boolean)
+        .join(", ");
+    }
     return rows.map(row => {
-      const lat = parseFloat(getCol(row, ["Latitude","latitude","Lat","lat"]));
-      const lng = parseFloat(getCol(row, ["Longitude","longitude","Lng","lng","Lon","lon"]));
+      const lat = parseFloat(getCol(row, ["Latitude","Lat"]));
+      const lng = parseFloat(getCol(row, ["Longitude","Lng","Lon"]));
+      const fullAddrCol = getCol(row, ["Full Address","Address"]);
+      const street = getColsJoined(row, ["street address","street","address line","address"], ["city","state","zip","full address"]);
+      const city = getCol(row, ["City"]);
+      const state = getCol(row, ["State"]);
+      const zip = getCol(row, ["Zip","Zip Code","Postal Code"]);
+      const cityStateZip = [city, [state, zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+      const builtAddr = [street, cityStateZip].filter(Boolean).join(", ");
       return {
-        address: getCol(row, ["Full Address","Address","full address","address"]),
+        address: fullAddrCol || builtAddr,
         name: getCol(row, ["Customer Name","Name"]),
         priority: parseInt(getCol(row, ["Priority Assigned","Priority"])) || 3,
         priorityTime: getCol(row, ["Priority Assigned Time"]),

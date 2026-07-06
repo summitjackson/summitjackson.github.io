@@ -1148,7 +1148,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
           <input type="text" id="sheetUrl" value="https://docs.google.com/spreadsheets/d/1OckWE_wd8xuIL5xw9Dl5-PtcD97skrH68AMDsMRG9n0/edit?usp=sharing">
         </div>
         <button class="primary full" id="btnLoadSheet">Load / Refresh from Sheet</button>
-        <small class="hint">Sheet must be shared "Anyone with the link". Preferred columns: Street Address, City, State, Zip (more accurate geocoding) plus Customer Name, Priority Assigned, Priority Assigned Time, Last Check-in, Next Check-in. A single "Full Address" column still works as a fallback. If your work network blocks fetching Google directly, use Paste or Upload below instead &mdash; both work fully offline from any network.</small>
+        <small class="hint">Sheet must be shared "Anyone with the link". Preferred columns: Street Address (or Street Address 1 + Street Address 2), City, State, Zip (more accurate geocoding) plus Customer Name, Priority Assigned, Priority Assigned Time, Last Check-in, Next Check-in. A single "Full Address" column still works as a fallback. Column matching is case/spacing-tolerant. If your work network blocks fetching Google directly, use Paste or Upload below instead &mdash; both work fully offline from any network.</small>
         <div class="status-line" id="sheetStatus">No sheet loaded yet.</div>
 
         <div class="divider-or">or paste / upload</div>
@@ -1490,17 +1490,58 @@ License: MIT
     return point;
   }
 
+  function normalizeHeader(h){
+    return (h || "").replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
+  // Matches column headers by normalized exact name first (handles case/spacing differences
+  // like "STREET ADDRESS" vs "street address"), then falls back to partial phrase matching
+  // (handles headers like "Street Address 1" when we're looking for "street address").
   function getCol(row, names){
-    for(const n of names){
-      if(row[n] !== undefined && row[n] !== null && String(row[n]).trim() !== "") return String(row[n]).trim();
+    const normNames = names.map(normalizeHeader);
+    const rowKeys = Object.keys(row);
+    // Exact normalized match first
+    for(const key of rowKeys){
+      const nk = normalizeHeader(key);
+      if(normNames.includes(nk)){
+        const val = row[key];
+        if(val !== undefined && val !== null && String(val).trim() !== "") return String(val).trim();
+      }
+    }
+    // Fuzzy: header contains one of the target phrases
+    for(const key of rowKeys){
+      const nk = normalizeHeader(key);
+      if(normNames.some(n => n && nk.includes(n))){
+        const val = row[key];
+        if(val !== undefined && val !== null && String(val).trim() !== "") return String(val).trim();
+      }
     }
     return "";
+  }
+
+  // Gathers every column whose header matches any of the given phrases (fuzzy, normalized),
+  // sorted by header name so "Street Address 1" comes before "Street Address 2", then joins them.
+  // Used for split address lines that should combine into one field.
+  function getColsJoined(row, phrases, excludePhrases){
+    const norm = phrases.map(normalizeHeader);
+    const exclude = (excludePhrases || []).map(normalizeHeader);
+    return Object.keys(row)
+      .filter(key => {
+        const nk = normalizeHeader(key);
+        if(exclude.some(ex => nk.includes(ex))) return false;
+        return norm.some(n => nk.includes(n));
+      })
+      .sort()
+      .map(key => (row[key] || "").toString().trim())
+      .filter(Boolean)
+      .join(", ");
   }
 
   // Any column header not already mapped to a known field is captured here automatically,
   // so adding new columns to the spreadsheet makes them show up on pins without code changes.
   const KNOWN_HEADERS = new Set([
-    "full address","address","street address","street","city","state","zip","zip code","postal code",
+    "full address","address","street address","street","street address 1","street address 2",
+    "address line 1","address line 2","address 1","address 2","city","state","zip","zip code","postal code",
     "customer name","name","priority assigned","priority","priority assigned time",
     "last check-in","last check in","next check-in","next check in",
     "property type","type","commercial/residential","category"
@@ -1510,7 +1551,7 @@ License: MIT
     const extra = {};
     Object.keys(row).forEach(key => {
       if(!key) return;
-      if(KNOWN_HEADERS.has(key.trim().toLowerCase())) return;
+      if(KNOWN_HEADERS.has(normalizeHeader(key))) return;
       const val = row[key];
       if(val !== undefined && val !== null && String(val).trim() !== ""){
         extra[key.trim()] = String(val).trim();
@@ -1528,12 +1569,14 @@ License: MIT
     let added = 0, skipped = 0, noAddr = 0;
     const existingAddrs = new Set(points.map(p => normAddr(p.address)));
     rows.forEach(row => {
-      const street = getCol(row, ["Street Address","Street","street address","street"]);
-      const city = getCol(row, ["City","city"]);
-      const state = getCol(row, ["State","state"]);
-      const zip = getCol(row, ["Zip","ZIP","Zip Code","zip","postal code"]);
+      // Combines "Street Address 1" + "Street Address 2" (or similar split address-line columns)
+      // into one street value; falls back to a single "Street Address"/"Street" column if present.
+      const street = getColsJoined(row, ["street address","street","address line","address"], ["city","state","zip","full address"]);
+      const city = getCol(row, ["City"]);
+      const state = getCol(row, ["State"]);
+      const zip = getCol(row, ["Zip","Zip Code","Postal Code"]);
       const hasStructured = !!(street || city || state || zip);
-      const fullAddrCol = getCol(row, ["Full Address","Address","full address","address"]);
+      const fullAddrCol = getCol(row, ["Full Address","Address"]);
       const address = hasStructured ? buildAddress(street, city, state, zip) : fullAddrCol;
       if(!address){ noAddr++; return; }
       if(existingAddrs.has(normAddr(address))){ skipped++; return; }
@@ -1543,8 +1586,8 @@ License: MIT
         city: city,
         state: state,
         zip: zip,
-        name: getCol(row, ["Customer Name","Name","customer name"]),
-        priority: parseInt(getCol(row, ["Priority Assigned","Priority","priority assigned"])) || 3,
+        name: getCol(row, ["Customer Name","Name"]),
+        priority: parseInt(getCol(row, ["Priority Assigned","Priority"])) || 3,
         priorityTime: getCol(row, ["Priority Assigned Time"]),
         lastCheckin: getCol(row, ["Last Check-in","Last Check In"]),
         nextCheckin: getCol(row, ["Next Check-in","Next Check In"]),

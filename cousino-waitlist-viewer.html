@@ -717,26 +717,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .header-stats b{color:#fff;font-size:15px;display:block;font-family:var(--sans);}
   .header-stats .stat{text-align:right;}
 
-  .wrap{flex:1;position:relative;min-height:0;overflow:hidden;}
-  #map{position:absolute;top:0;left:0;right:0;bottom:0;background:#0a141f;}
+  .wrap{flex:1;position:relative;min-height:0;overflow:hidden;display:flex;}
+  #map{position:relative;flex:1;min-height:0;background:#0a141f;}
 
   aside{
-    position:absolute;top:0;right:0;bottom:0;width:var(--sidebar-w);
+    position:relative;width:var(--sidebar-w);flex-shrink:0;
     background:var(--panel);border-left:1px solid var(--line);
     display:flex;flex-direction:column;min-height:0;
-    transform:translateX(100%);transition:transform .25s ease;
     box-shadow:-8px 0 24px rgba(0,0,0,0.35);z-index:400;
   }
-  aside.open{transform:translateX(0);}
-  #sidebarToggle{
-    position:absolute;top:50%;right:0;transform:translateY(-50%);z-index:450;
-    background:var(--flood);color:#fff;border:1px solid var(--flood-deep);border-right:none;
-    border-radius:8px 0 0 8px;padding:16px 8px;font-size:12px;font-weight:700;letter-spacing:1px;
-    text-transform:uppercase;writing-mode:vertical-rl;text-orientation:mixed;cursor:pointer;
-    transition:right .25s ease;box-shadow:-4px 0 12px rgba(0,0,0,0.3);
-  }
-  #sidebarToggle:hover{background:var(--flood-deep);}
-  #sidebarToggle.shifted{right:var(--sidebar-w);}
 
   .aside-scroll{overflow-y:auto;flex:1;min-height:0;}
   section.block{border-bottom:1px solid var(--line-soft);padding:16px 18px;}
@@ -854,13 +843,29 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 <div class="wrap">
   <div id="map"></div>
-  <button id="sidebarToggle">Menu</button>
 
   <aside id="sidebar">
     <div class="aside-scroll">
 
       <section class="block">
-        <h2>Load data</h2>
+        <h2>Auto-load from hosted folder</h2>
+        <div class="field">
+          <label for="autoFileName">Data URL (filename, or full URL)</label>
+          <input type="text" id="autoFileName" value="https://summitjackson.github.io/data.json" style="width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;">
+        </div>
+        <div class="row">
+          <button class="primary full" id="btnAutoLoadNow">Load Now</button>
+        </div>
+        <label style="margin-top:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);">
+          <input type="checkbox" id="autoRefreshToggle" checked style="width:auto;">
+          Auto-refresh every 30 seconds
+        </label>
+        <small class="hint">Export "data.json" from the dashboard and upload it to the same hosted location, replacing the old copy, whenever the waitlist changes. This page will pick it up automatically &mdash; no upload needed here once it's in place.</small>
+        <div class="status-line" id="autoLoadStatus">Checking for data&hellip;</div>
+      </section>
+
+      <section class="block">
+        <h2>Or load a file manually</h2>
         <div class="row" style="margin-bottom:8px;">
           <div style="flex:1;">
             <label for="uploadData">Upload a data file</label>
@@ -891,8 +896,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </div>
         <div class="slider-row">
           <label>Max zoom</label>
-          <input type="range" id="rMaxZoom" min="8" max="18" value="14">
-          <span class="val" id="vMaxZoom">14</span>
+          <input type="range" id="rMaxZoom" min="8" max="19" value="18">
+          <span class="val" id="vMaxZoom">18</span>
         </div>
         <label style="margin-top:4px;">Point weight</label>
         <div class="pillrow">
@@ -900,6 +905,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
           <button id="wPriority" class="active">By Priority</button>
         </div>
         <small class="hint">"By Priority" makes higher-priority customers (5) glow hotter than lower ones (1) on the heatmap.</small>
+        <small class="hint" style="margin-top:8px;"><b style="color:#e0762f;">&#9679;</b> Commercial &nbsp; <b style="color:#3fb27f;">&#9679;</b> Residential &nbsp; other colors = priority level (when property type isn't set).</small>
       </section>
 
     </div>
@@ -955,15 +961,7 @@ License: MIT
   let weightMode = "priority";
   let hasFit = false;
 
-  // ---------- Sidebar toggle ----------
-  const sidebar = document.getElementById('sidebar');
-  const sidebarToggle = document.getElementById('sidebarToggle');
-  sidebarToggle.addEventListener('click', function(){
-    const isOpen = sidebar.classList.toggle('open');
-    sidebarToggle.classList.toggle('shifted', isOpen);
-    sidebarToggle.textContent = isOpen ? "Close" : "Menu";
-    setTimeout(() => map.invalidateSize(), 260);
-  });
+  // ---------- Sidebar is static/docked in the viewer (no slide-out) ----------
 
   function save(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(points)); }catch(e){}
@@ -984,8 +982,39 @@ License: MIT
       default: return '#2f8fd6';
     }
   }
+  // Commercial = orange, Residential = green. Falls back to priority-based color
+  // if the property type isn't recognized or wasn't provided in the sheet.
+  function pinColor(p){
+    const t = (p.propertyType || "").toLowerCase();
+    if(t.includes("commercial")) return '#e0762f';
+    if(t.includes("residential")) return '#3fb27f';
+    return priorityColor(p.priority);
+  }
   function escapeHtml(s){
     return (s||"").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Builds popup HTML from every field on the point, including any extra spreadsheet
+  // columns captured in p.extra -- so adding columns to the sheet automatically shows up here.
+  function buildPopupHtml(p){
+    const lines = [];
+    if(p.name) lines.push(`<b>${escapeHtml(p.name)}</b>`);
+    lines.push(escapeHtml(p.address));
+    if(p.propertyType) lines.push(`Property type: ${escapeHtml(p.propertyType)}`);
+    lines.push(`Priority: ${p.priority || 3}`);
+    if(p.priorityTime) lines.push(`Priority assigned: ${escapeHtml(p.priorityTime)}`);
+    if(p.lastCheckin) lines.push(`Last check-in: ${escapeHtml(p.lastCheckin)}`);
+    if(p.nextCheckin) lines.push(`Next check-in: ${escapeHtml(p.nextCheckin)}`);
+    if(p.extra){
+      Object.keys(p.extra).forEach(key => {
+        lines.push(`${escapeHtml(key)}: ${escapeHtml(p.extra[key])}`);
+      });
+    }
+    let html = lines.join('<br>');
+    if(p.approx){
+      html += `<div style="color:#e0762f;margin-top:6px;">&#9888; Approximate match</div>`;
+    }
+    return `<div style="max-width:240px;">${html}</div>`;
   }
 
   // ---------- Load data file ----------
@@ -1022,14 +1051,39 @@ License: MIT
     e.target.value = "";
   });
 
+  const KNOWN_HEADERS = new Set([
+    "full address","address","street address","street","city","state","zip","zip code","postal code",
+    "customer name","name","priority assigned","priority","priority assigned time",
+    "last check-in","last check in","next check-in","next check in","latitude","lat","longitude","lng","lon",
+    "geocode status","status","property type","type","commercial/residential","category"
+  ].map(s => s.toLowerCase()));
+
+  function extractExtrasFromRow(row){
+    const extra = {};
+    Object.keys(row).forEach(key => {
+      if(!key) return;
+      if(KNOWN_HEADERS.has(key.trim().toLowerCase())) return;
+      const val = row[key];
+      if(val !== undefined && val !== null && String(val).trim() !== ""){
+        extra[key.trim()] = String(val).trim();
+      }
+    });
+    return extra;
+  }
+
   function normalizeJsonPoints(arr){
     if(!Array.isArray(arr)) throw new Error("JSON file must contain an array of points");
     return arr.map(p => ({
       address: p.address || "",
       name: p.name || "",
       priority: parseInt(p.priority) || 3,
+      priorityTime: p.priorityTime || "",
       lastCheckin: p.lastCheckin || "",
       nextCheckin: p.nextCheckin || "",
+      propertyType: p.propertyType || "",
+      extra: p.extra || extractExtrasFromRow(p),
+      approx: !!p.approx,
+      corrected: !!p.corrected,
       lat: p.lat != null ? parseFloat(p.lat) : null,
       lng: p.lng != null ? parseFloat(p.lng) : null,
       status: p.status || (p.lat != null ? "geocoded" : "pending")
@@ -1050,8 +1104,11 @@ License: MIT
         address: getCol(row, ["Full Address","Address","full address","address"]),
         name: getCol(row, ["Customer Name","Name"]),
         priority: parseInt(getCol(row, ["Priority Assigned","Priority"])) || 3,
+        priorityTime: getCol(row, ["Priority Assigned Time"]),
         lastCheckin: getCol(row, ["Last Check-in","Last Check In"]),
         nextCheckin: getCol(row, ["Next Check-in","Next Check In"]),
+        propertyType: getCol(row, ["Property Type","Type","Commercial/Residential","Category"]),
+        extra: extractExtrasFromRow(row),
         lat, lng,
         status: "geocoded"
       };
@@ -1099,7 +1156,7 @@ License: MIT
 
     if(mode === "pins" || mode === "both"){
       geocoded.forEach(p => {
-        const color = priorityColor(p.priority);
+        const color = pinColor(p);
         const icon = L.divIcon({
           className: '',
           html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #0b1420;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>`,
@@ -1107,7 +1164,7 @@ License: MIT
           iconAnchor: [7, 7]
         });
         const marker = L.marker([p.lat, p.lng], { icon, draggable: false, interactive: true });
-        marker.bindPopup(`<b>${escapeHtml(p.address)}</b><br>${p.name ? escapeHtml(p.name)+'<br>' : ''}Priority: ${p.priority}<br>${p.lastCheckin ? 'Last check-in: '+escapeHtml(p.lastCheckin)+'<br>' : ''}${p.nextCheckin ? 'Next check-in: '+escapeHtml(p.nextCheckin) : ''}`);
+        marker.bindPopup(buildPopupHtml(p));
         markerLayer.addLayer(marker);
       });
       markerLayer.addTo(map);
@@ -1135,12 +1192,78 @@ License: MIT
     }
   }
 
+  // ---------- Auto-load from hosted folder ----------
+  const autoLoadStatusEl = document.getElementById('autoLoadStatus');
+  const autoFileNameInput = document.getElementById('autoFileName');
+  const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+  let autoRefreshTimer = null;
+  let lastAutoLoadedRaw = null;
+
+  function fetchAutoFile(isFirstLoad){
+    const raw = autoFileNameInput.value.trim();
+    if(!raw){
+      autoLoadStatusEl.textContent = "Enter a filename or URL to auto-load.";
+      autoLoadStatusEl.className = "status-line error";
+      return;
+    }
+    const isAbsolute = /^https?:\/\//i.test(raw);
+    const base = isAbsolute ? raw : `./${raw}`;
+    // Cache-bust so the browser doesn't serve a stale cached copy after the file is replaced on the host
+    const url = base + (base.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+    const label = raw;
+    fetch(url, {cache: "no-store"})
+      .then(r => {
+        if(!r.ok) throw new Error(`File not found (HTTP ${r.status})`);
+        return r.text();
+      })
+      .then(text => {
+        if(text === lastAutoLoadedRaw){
+          // Unchanged since last check -- nothing to do, avoid flicker/re-fit
+          if(isFirstLoad){
+            autoLoadStatusEl.textContent = `Loaded ${points.length} location(s) from ${label}.`;
+            autoLoadStatusEl.className = "status-line done";
+          }
+          return;
+        }
+        lastAutoLoadedRaw = text;
+        if(label.toLowerCase().endsWith('.json')){
+          points = normalizeJsonPoints(JSON.parse(text));
+        } else {
+          const parsed = Papa.parse(text.trim(), {header:true, skipEmptyLines:true});
+          points = normalizeCsvRows(parsed.data);
+        }
+        save();
+        if(isFirstLoad) hasFit = false;
+        render();
+        autoLoadStatusEl.textContent = `Loaded ${points.length} location(s) from ${label} (last checked ${new Date().toLocaleTimeString()}).`;
+        autoLoadStatusEl.className = "status-line done";
+      })
+      .catch(err => {
+        autoLoadStatusEl.textContent = `Couldn't auto-load ${label}: ${err.message}. Falling back to manual upload below.`;
+        autoLoadStatusEl.className = "status-line error";
+      });
+  }
+
+  document.getElementById('btnAutoLoadNow').addEventListener('click', function(){
+    fetchAutoFile(true);
+  });
+
+  function setupAutoRefresh(){
+    if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+    if(autoRefreshToggle.checked){
+      autoRefreshTimer = setInterval(() => fetchAutoFile(false), 30000);
+    }
+  }
+  autoRefreshToggle.addEventListener('change', setupAutoRefresh);
+
   // ---------- Init ----------
   if(points.length > 0){
     statusEl.textContent = `Loaded ${points.length} previously-saved location(s) from this browser.`;
     statusEl.className = "status-line done";
   }
   render();
+  fetchAutoFile(true);
+  setupAutoRefresh();
 
 })();
 </script>

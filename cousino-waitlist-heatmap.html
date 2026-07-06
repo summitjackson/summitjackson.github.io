@@ -1258,6 +1258,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
           <button class="full" id="btnExportJson">Download JSON</button>
         </div>
         <small class="hint">CSV includes resolved latitude/longitude &mdash; reusable in Google My Maps, ArcGIS, Excel, etc.</small>
+
+        <button class="primary full" id="btnExportDataJson" style="margin-top:12px;">Export as data.json (for Viewer)</button>
+        <small class="hint">Downloads a file named exactly <b>data.json</b>. Drop it into the same hosted folder as the Viewer page, replacing the old copy, and the Viewer will auto-load it &mdash; no manual upload needed on that end.</small>
       </section>
 
       <section class="block" style="border-bottom:none;">
@@ -1466,6 +1469,7 @@ License: MIT
       priorityTime: "",
       lastCheckin: "",
       nextCheckin: "",
+      extra: {},
       lat: null,
       lng: null,
       status: "pending",
@@ -1481,6 +1485,27 @@ License: MIT
       if(row[n] !== undefined && row[n] !== null && String(row[n]).trim() !== "") return String(row[n]).trim();
     }
     return "";
+  }
+
+  // Any column header not already mapped to a known field is captured here automatically,
+  // so adding new columns to the spreadsheet makes them show up on pins without code changes.
+  const KNOWN_HEADERS = new Set([
+    "full address","address","street address","street","city","state","zip","zip code","postal code",
+    "customer name","name","priority assigned","priority","priority assigned time",
+    "last check-in","last check in","next check-in","next check in"
+  ].map(s => s.toLowerCase()));
+
+  function extractExtras(row){
+    const extra = {};
+    Object.keys(row).forEach(key => {
+      if(!key) return;
+      if(KNOWN_HEADERS.has(key.trim().toLowerCase())) return;
+      const val = row[key];
+      if(val !== undefined && val !== null && String(val).trim() !== ""){
+        extra[key.trim()] = String(val).trim();
+      }
+    });
+    return extra;
   }
 
   function buildAddress(street, city, state, zip){
@@ -1512,6 +1537,7 @@ License: MIT
         priorityTime: getCol(row, ["Priority Assigned Time"]),
         lastCheckin: getCol(row, ["Last Check-in","Last Check In"]),
         nextCheckin: getCol(row, ["Next Check-in","Next Check In"]),
+        extra: extractExtras(row),
         status: "pending",
         source: sourceLabel
       });
@@ -1855,14 +1881,27 @@ License: MIT
 
   // ---------- Export ----------
   document.getElementById('btnExportCsv').addEventListener('click', function(){
-    const header = ["Full Address","Customer Name","Priority Assigned","Priority Assigned Time","Last Check-in","Next Check-in","Latitude","Longitude","Geocode Status"];
-    const rows = points.map(p => [p.address,p.name,p.priority,p.priorityTime,p.lastCheckin,p.nextCheckin,p.lat ?? "",p.lng ?? "",p.status]);
+    // Collect the union of all extra column names used across every point, so any
+    // custom columns added to the sheet round-trip cleanly through export/import.
+    const extraKeys = [];
+    points.forEach(p => {
+      if(p.extra) Object.keys(p.extra).forEach(k => { if(!extraKeys.includes(k)) extraKeys.push(k); });
+    });
+    const header = ["Street Address","City","State","Zip","Full Address","Customer Name","Priority Assigned","Priority Assigned Time","Last Check-in","Next Check-in","Latitude","Longitude","Geocode Status", ...extraKeys];
+    const rows = points.map(p => [
+      p.street||"", p.city||"", p.state||"", p.zip||"", p.address, p.name, p.priority, p.priorityTime, p.lastCheckin, p.nextCheckin, p.lat ?? "", p.lng ?? "", p.status,
+      ...extraKeys.map(k => (p.extra && p.extra[k]) || "")
+    ]);
     const csv = Papa.unparse([header, ...rows]);
     downloadFile("cousino-waitlist-floods-july-2026.csv", csv, "text/csv");
   });
 
   document.getElementById('btnExportJson').addEventListener('click', function(){
     downloadFile("cousino-waitlist-floods-july-2026.json", JSON.stringify(points, null, 2), "application/json");
+  });
+
+  document.getElementById('btnExportDataJson').addEventListener('click', function(){
+    downloadFile("data.json", JSON.stringify(points, null, 2), "application/json");
   });
 
   function downloadFile(filename, content, mime){
@@ -1926,8 +1965,7 @@ License: MIT
           iconAnchor: [8, 8]
         });
         const marker = L.marker([p.lat, p.lng], { icon, draggable: true });
-        const approxNote = p.approx ? `<div style="color:#e0762f;margin-top:4px;">&#9888; Approximate match &mdash; drag pin to correct it</div>` : '';
-        marker.bindPopup(`<b>${escapeHtml(p.address)}</b><br>${p.name ? escapeHtml(p.name)+'<br>' : ''}Priority: ${p.priority}<br>${p.lastCheckin ? 'Last check-in: '+escapeHtml(p.lastCheckin)+'<br>' : ''}${p.nextCheckin ? 'Next check-in: '+escapeHtml(p.nextCheckin)+'<br>' : ''}${approxNote}<div style="color:#8ea3b3;margin-top:4px;font-size:11px;">Drag this pin to correct its position</div>`);
+        marker.bindPopup(buildPopupHtml(p));
         marker.on('dragend', function(){
           const ll = marker.getLatLng();
           p.lat = ll.lat;
@@ -1976,6 +2014,32 @@ License: MIT
 
   function escapeHtml(s){
     return (s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Builds popup HTML from every field on the point, including any extra spreadsheet
+  // columns captured in p.extra -- so adding columns to the sheet automatically shows up here.
+  function buildPopupHtml(p){
+    const lines = [];
+    if(p.name) lines.push(`<b>${escapeHtml(p.name)}</b>`);
+    lines.push(escapeHtml(p.address));
+    lines.push(`Priority: ${p.priority || 3}`);
+    if(p.priorityTime) lines.push(`Priority assigned: ${escapeHtml(p.priorityTime)}`);
+    if(p.lastCheckin) lines.push(`Last check-in: ${escapeHtml(p.lastCheckin)}`);
+    if(p.nextCheckin) lines.push(`Next check-in: ${escapeHtml(p.nextCheckin)}`);
+    if(p.extra){
+      Object.keys(p.extra).forEach(key => {
+        lines.push(`${escapeHtml(key)}: ${escapeHtml(p.extra[key])}`);
+      });
+    }
+    let html = lines.join('<br>');
+    if(p.approx){
+      html += `<div style="color:#e0762f;margin-top:6px;">&#9888; Approximate match &mdash; drag pin to correct it</div>`;
+    }
+    if(p.corrected){
+      html += `<div style="color:#3fb27f;margin-top:4px;">&#10003; Manually corrected position</div>`;
+    }
+    html += `<div style="color:#8ea3b3;margin-top:6px;font-size:11px;">Drag this pin to correct its position</div>`;
+    return `<div style="max-width:240px;">${html}</div>`;
   }
 
   // ---------- Init ----------

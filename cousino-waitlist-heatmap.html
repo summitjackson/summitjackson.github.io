@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Editor - Cousino Waitlist - July 2026 Storms</title>
+<title>Cousino Waitlist - Floods - July 2026</title>
 <style>
 /* required styles */
 
@@ -1871,19 +1871,7 @@ License: MIT
     }
   }
 
-  function geocodeAddress(point){
-    const hasStructured = !!(point.street || point.city || point.state || point.zip);
-    let url;
-    if(hasStructured){
-      const params = new URLSearchParams({format: "json", addressdetails: "1", limit: "1"});
-      if(point.street) params.set("street", point.street);
-      if(point.city) params.set("city", point.city);
-      if(point.state) params.set("state", point.state);
-      if(point.zip) params.set("postalcode", point.zip);
-      url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
-    } else {
-      url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(point.address)}`;
-    }
+  function fetchGeocodeHit(url){
     return fetch(url, {headers: {"Accept":"application/json"}})
       .then(r => r.json())
       .then(arr => {
@@ -1896,6 +1884,34 @@ License: MIT
         }
         return null;
       });
+  }
+
+  function sleep(ms){
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function geocodeAddress(point){
+    const hasStructured = !!(point.street || point.city || point.state || point.zip);
+    if(hasStructured){
+      const params = new URLSearchParams({format: "json", addressdetails: "1", limit: "1"});
+      if(point.street) params.set("street", point.street);
+      if(point.city) params.set("city", point.city);
+      if(point.state) params.set("state", point.state);
+      if(point.zip) params.set("postalcode", point.zip);
+      const structuredUrl = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+      const structuredHit = await fetchGeocodeHit(structuredUrl);
+      if(structuredHit) return structuredHit;
+
+      // Structured search is strict (requires close-to-exact street/city/state/zip matches) and
+      // fails on things like "State Route 590" or directional prefixes ("N", "W") that OSM stores
+      // differently. Freeform search is far more forgiving, so fall back to it before giving up.
+      await sleep(1100); // stay within Nominatim's ~1 req/sec usage policy
+      const freeformUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(point.address)}`;
+      return await fetchGeocodeHit(freeformUrl);
+    } else {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(point.address)}`;
+      return await fetchGeocodeHit(url);
+    }
   }
 
   document.getElementById('btnRetryFailed').addEventListener('click', function(){

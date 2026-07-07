@@ -873,6 +873,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
   }
   table.datasheet th.sortable{cursor:pointer;user-select:none;}
   table.datasheet th.sortable:hover{color:#fff;}
+  table.datasheet .rowpin{
+    background:transparent;border:none;color:var(--flood);
+    cursor:pointer;padding:3px 6px;border-radius:4px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  table.datasheet .rowpin:hover{color:#fff;background:var(--panel-2);}
+  table.datasheet .rowpin:disabled{color:var(--text-dim);opacity:0.35;cursor:default;background:transparent;}
   table.datasheet td{
     padding:2px;
     border-bottom:1px solid var(--line-soft);
@@ -1192,7 +1199,7 @@ License: MIT
     ].concat(extraKeys.map(k => ({key:'extra:'+k, label:k, get:p => (p.extra && p.extra[k]) || '', num:false})));
 
     const headerRow = document.getElementById('sheetHeaderRow');
-    headerRow.innerHTML = cols.map(c => {
+    headerRow.innerHTML = `<th class="pin-col"></th>` + cols.map(c => {
       const arrow = sheetSortKey === c.key ? (sheetSortDir === 1 ? ' &#9650;' : ' &#9660;') : '';
       return `<th class="sortable" data-key="${escapeHtml(c.key)}">${escapeHtml(c.label)}${arrow}</th>`;
     }).join('');
@@ -1224,7 +1231,9 @@ License: MIT
     tbody.innerHTML = "";
     rows.forEach(p => {
       const tr = document.createElement('tr');
+      const canPin = p.lat != null && p.lng != null;
       tr.innerHTML = `
+        <td class="pin-cell"><button class="rowpin" title="Show on map"${canPin ? '' : ' disabled'}><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></button></td>
         <td class="readonly-cell">${escapeHtml(p.address)}</td>
         <td class="readonly-cell">${escapeHtml(p.propertyType)}</td>
         <td class="readonly-cell">${escapeHtml(p.name)}</td>
@@ -1233,6 +1242,9 @@ License: MIT
         <td class="readonly-cell">${p.lng != null ? p.lng.toFixed(6) : ''}</td>
         ${extraKeys.map(k => `<td class="readonly-cell">${escapeHtml((p.extra && p.extra[k]) || '')}</td>`).join('')}
       `;
+      if(canPin){
+        tr.querySelector('.rowpin').addEventListener('click', () => focusPoint(p));
+      }
       tbody.appendChild(tr);
     });
   }
@@ -1244,6 +1256,8 @@ License: MIT
   }).addTo(map);
 
   const markerLayer = L.layerGroup();
+  let markersByPoint = new Map();
+  let focusedMarker = null;
   let heatLayer = null;
   let mode = "both";
   let weightMode = "priority";
@@ -1307,6 +1321,41 @@ License: MIT
     const key = (p.priorityLabel || "").trim().toLowerCase();
     if(PRIORITY_COLORS[key]) return PRIORITY_COLORS[key];
     return {bg: priorityColor(p.priority), icon:'#ffffff'};
+  }
+
+  // Stacking rank for markers: BD-X on top, then EMP-X, then plain X; within each
+  // tier, 1 is highest priority and stacks above 5. Spaced by 5000 so priority always
+  // outweighs Leaflet's default y-position-based z-index (which varies by screen pixels).
+  function priorityZOffset(p){
+    const key = (p.priorityLabel || "").trim().toLowerCase();
+    let m, rank;
+    if((m = key.match(/^bd-([1-5])$/)))       rank = 10 + (6 - parseInt(m[1])); // 15..11
+    else if((m = key.match(/^emp-([1-5])$/))) rank = 5  + (6 - parseInt(m[1])); // 10..6
+    else if((m = key.match(/^([1-5])$/)))     rank = 6 - parseInt(m[1]);        // 5..1
+    else rank = 6 - Math.min(5, Math.max(1, p.priority || 3));                  // fallback: plain tier
+    return rank * 5000;
+  }
+
+  // Fly the map to a point from the data sheet, closing the drawer so the map is
+  // visible, and pop its marker above everything else.
+  function focusPoint(p){
+    if(p.lat == null || p.lng == null) return;
+    if(sheetDrawer.classList.contains('open')){
+      sheetDrawer.classList.remove('open');
+      sheetToggle.innerHTML = "Data Sheet &#9650;";
+      setTimeout(() => map.invalidateSize(), 260);
+    }
+    const targetZoom = Math.max(map.getZoom(), 17);
+    map.flyTo([p.lat, p.lng], targetZoom, {duration: 0.8});
+    const marker = markersByPoint.get(p);
+    if(marker){
+      if(focusedMarker && focusedMarker !== marker && focusedMarker._priorityZ != null){
+        focusedMarker.setZIndexOffset(focusedMarker._priorityZ);
+      }
+      marker.setZIndexOffset(1000000);
+      focusedMarker = marker;
+      map.once('moveend', () => marker.openPopup());
+    }
   }
 
   function escapeHtml(s){
@@ -1522,6 +1571,8 @@ License: MIT
     updateStats();
     renderDataSheet();
     markerLayer.clearLayers();
+    markersByPoint = new Map();
+    focusedMarker = null;
     if(heatLayer){ map.removeLayer(heatLayer); heatLayer = null; }
 
     const geocoded = points.filter(p => p.lat != null && p.lng != null);
@@ -1537,8 +1588,11 @@ License: MIT
           iconSize: [34, 34],
           iconAnchor: [17, 17]
         });
-        const marker = L.marker([p.lat, p.lng], { icon, draggable: false, interactive: true });
+        const zOffset = priorityZOffset(p);
+        const marker = L.marker([p.lat, p.lng], { icon, draggable: false, interactive: true, zIndexOffset: zOffset });
+        marker._priorityZ = zOffset;
         marker.bindPopup(buildPopupHtml(p));
+        markersByPoint.set(p, marker);
         markerLayer.addLayer(marker);
       });
       markerLayer.addTo(map);

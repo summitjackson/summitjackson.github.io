@@ -1857,6 +1857,7 @@ License: MIT
             next.lat = res.lat;
             next.lng = res.lng;
             next.approx = res.approx;
+            next.geoSource = res.source || "";
             next.status = "geocoded";
           } else {
             next.status = "failed";
@@ -1880,7 +1881,7 @@ License: MIT
           // House-level precision types from Nominatim; anything else is a broader/approximate match
           const preciseTypes = ["house", "building", "residential", "yes"];
           const approx = !(hit.address && hit.address.house_number) && !preciseTypes.includes(hit.type);
-          return {lat: parseFloat(hit.lat), lng: parseFloat(hit.lon), approx};
+          return {lat: parseFloat(hit.lat), lng: parseFloat(hit.lon), approx, source: "OpenStreetMap"};
         }
         return null;
       });
@@ -1888,6 +1889,50 @@ License: MIT
 
   function sleep(ms){
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // The US Census Geocoder is free, no API key, US-only, and built on official TIGER/Line
+  // address ranges -- it often succeeds on rural highway addresses ("State Route 590") and
+  // small unincorporated communities where OpenStreetMap/Nominatim has sparse coverage.
+  // It does NOT support CORS, so it must be called via JSONP (a script-tag trick) instead
+  // of a normal fetch() -- a plain fetch to this API will silently fail in the browser.
+  function censusGeocodeJsonp(address){
+    return new Promise(resolve => {
+      const callbackName = "censusCb_" + Math.random().toString(36).slice(2);
+      let finished = false;
+      const script = document.createElement('script');
+
+      function cleanup(){
+        delete window[callbackName];
+        if(script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      window[callbackName] = function(data){
+        finished = true;
+        cleanup();
+        try{
+          const matches = data && data.result && data.result.addressMatches;
+          if(matches && matches.length > 0){
+            const m = matches[0];
+            resolve({lat: parseFloat(m.coordinates.y), lng: parseFloat(m.coordinates.x), approx: false, source: "US Census"});
+            return;
+          }
+        }catch(e){}
+        resolve(null);
+      };
+
+      script.onerror = function(){
+        if(!finished){ cleanup(); resolve(null); }
+      };
+
+      script.src = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&format=jsonp&callback=${callbackName}`;
+      document.head.appendChild(script);
+
+      // Safety timeout in case the callback never fires
+      setTimeout(() => {
+        if(!finished){ cleanup(); resolve(null); }
+      }, 8000);
+    });
   }
 
   async function geocodeAddress(point){
@@ -1907,10 +1952,17 @@ License: MIT
       // differently. Freeform search is far more forgiving, so fall back to it before giving up.
       await sleep(1100); // stay within Nominatim's ~1 req/sec usage policy
       const freeformUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(point.address)}`;
-      return await fetchGeocodeHit(freeformUrl);
+      const freeformHit = await fetchGeocodeHit(freeformUrl);
+      if(freeformHit) return freeformHit;
+
+      // Last resort: US Census Geocoder, which frequently covers rural/highway addresses
+      // that OpenStreetMap doesn't.
+      return await censusGeocodeJsonp(point.address);
     } else {
       const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(point.address)}`;
-      return await fetchGeocodeHit(url);
+      const hit = await fetchGeocodeHit(url);
+      if(hit) return hit;
+      return await censusGeocodeJsonp(point.address);
     }
   }
 
@@ -2010,7 +2062,7 @@ License: MIT
         <div class="addr">
           <span>${escapeHtml(p.address)} <span class="prio ${prioClass}">P${p.priority||3}</span></span>
         </div>
-        <div class="meta">${p.name ? escapeHtml(p.name)+' &middot; ' : ''}${p.status}${p.lat ? ' &middot; '+p.lat.toFixed(4)+', '+p.lng.toFixed(4) : ''}${p.approx ? ' &middot; <span style="color:#e0762f;">approximate</span>' : ''}${p.corrected ? ' &middot; <span style="color:#3fb27f;">manually corrected</span>' : ''}</div>
+        <div class="meta">${p.name ? escapeHtml(p.name)+' &middot; ' : ''}${p.status}${p.lat ? ' &middot; '+p.lat.toFixed(4)+', '+p.lng.toFixed(4) : ''}${p.geoSource ? ' &middot; via '+escapeHtml(p.geoSource) : ''}${p.approx ? ' &middot; <span style="color:#e0762f;">approximate</span>' : ''}${p.corrected ? ' &middot; <span style="color:#3fb27f;">manually corrected</span>' : ''}</div>
         <div class="actions"><button data-id="${p.id}" class="del">&times;</button></div>
       `;
       ul.appendChild(li);

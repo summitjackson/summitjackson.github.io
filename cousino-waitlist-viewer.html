@@ -740,13 +740,31 @@ svg.leaflet-image-layer.leaflet-interactive path {
   aside{
     position:relative;width:var(--sidebar-w);flex-shrink:0;
     background:var(--panel);border-left:1px solid var(--line);
-    display:flex;flex-direction:column;min-height:0;
+    display:flex;flex-direction:row;min-height:0;
     box-shadow:-8px 0 24px rgba(0,0,0,0.35);z-index:400;
   }
+  aside.collapsed{width:26px;}
+  aside.collapsed .aside-scroll{display:none;}
+
+  #sidebarToggle{
+    flex-shrink:0;width:26px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--panel-2);color:var(--text-dim);
+    border:none;border-right:1px solid var(--line-soft);border-radius:0;
+    padding:0;cursor:pointer;font-size:12px;
+  }
+  #sidebarToggle:hover{background:var(--panel);color:#fff;}
+  #sidebarToggle .tgl{display:inline-block;transition:transform .2s ease;}
+  aside.collapsed #sidebarToggle .tgl{transform:rotate(180deg);}
+  #sidebarToggle .tgl-mobile{display:none;}
 
   @media (max-width: 720px){
     .wrap{flex-direction:column;}
-    aside{width:100%;border-left:none;border-top:1px solid var(--line);max-height:48vh;box-shadow:0 -8px 24px rgba(0,0,0,0.35);}
+    aside{width:100%;border-left:none;border-top:1px solid var(--line);max-height:48vh;box-shadow:0 -8px 24px rgba(0,0,0,0.35);flex-direction:column;}
+    aside.collapsed{width:100%;max-height:28px;}
+    #sidebarToggle{width:100%;height:28px;border-right:none;border-bottom:1px solid var(--line-soft);}
+    #sidebarToggle .tgl-desktop{display:none;}
+    #sidebarToggle .tgl-mobile{display:inline-block;}
     #map{flex:1;min-height:160px;}
     header{padding:12px 14px;}
     .title-block h1{font-size:15px;}
@@ -853,6 +871,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
     letter-spacing:0.5px;
     white-space:nowrap;
   }
+  table.datasheet th.sortable{cursor:pointer;user-select:none;}
+  table.datasheet th.sortable:hover{color:#fff;}
   table.datasheet td{
     padding:2px;
     border-bottom:1px solid var(--line-soft);
@@ -987,7 +1007,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <header>
   <div class="title-block">
     <h1>Cousino &mdash; Residential Water Waitlist &mdash; July 2026</h1>
-    <span class="tag">Viewer Mode</span>
   </div>
   <div class="header-stats">
     <div class="stat"><b id="statTotal">0</b>total</div>
@@ -1022,6 +1041,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   </div>
 
   <aside id="sidebar">
+    <button id="sidebarToggle" title="Collapse / expand panel" aria-label="Collapse or expand panel">
+      <span class="tgl tgl-desktop">&#10095;</span>
+      <span class="tgl tgl-mobile">&#9660;</span>
+    </button>
     <div class="aside-scroll">
 
       <section class="block">
@@ -1033,8 +1056,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </div>
         <div class="slider-row">
           <label>Radius</label>
-          <input type="range" id="rRadius" min="10" max="60" value="28">
-          <span class="val" id="vRadius">28</span>
+          <input type="range" id="rRadius" min="10" max="60" value="48">
+          <span class="val" id="vRadius">48</span>
         </div>
         <div class="slider-row">
           <label>Blur</label>
@@ -1150,19 +1173,56 @@ License: MIT
     setTimeout(() => map.invalidateSize(), 260);
   });
 
+  let sheetSortKey = null;
+  let sheetSortDir = 1;
+
   function renderDataSheet(){
     const extraKeys = [];
     points.forEach(p => {
       if(p.extra) Object.keys(p.extra).forEach(k => { if(!extraKeys.includes(k)) extraKeys.push(k); });
     });
+
+    const cols = [
+      {key:'address',      label:'Address',       get:p => p.address || '',                          num:false},
+      {key:'propertyType', label:'Property Type', get:p => p.propertyType || '',                     num:false},
+      {key:'name',         label:'Customer Name', get:p => p.name || '',                             num:false},
+      {key:'priority',     label:'Priority',      get:p => p.priorityLabel || (p.priority || 3),     num:false},
+      {key:'lat',          label:'Lat',           get:p => p.lat,                                    num:true},
+      {key:'lng',          label:'Lng',           get:p => p.lng,                                    num:true}
+    ].concat(extraKeys.map(k => ({key:'extra:'+k, label:k, get:p => (p.extra && p.extra[k]) || '', num:false})));
+
     const headerRow = document.getElementById('sheetHeaderRow');
-    headerRow.innerHTML = `<th>Address</th><th>Property Type</th><th>Customer Name</th><th>Priority</th><th>Lat</th><th>Lng</th>` +
-      extraKeys.map(k => `<th>${escapeHtml(k)}</th>`).join('');
+    headerRow.innerHTML = cols.map(c => {
+      const arrow = sheetSortKey === c.key ? (sheetSortDir === 1 ? ' &#9650;' : ' &#9660;') : '';
+      return `<th class="sortable" data-key="${escapeHtml(c.key)}">${escapeHtml(c.label)}${arrow}</th>`;
+    }).join('');
+    headerRow.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', function(){
+        const k = this.getAttribute('data-key');
+        if(sheetSortKey === k){ sheetSortDir = -sheetSortDir; }
+        else { sheetSortKey = k; sheetSortDir = 1; }
+        renderDataSheet();
+      });
+    });
+
+    let rows = points.slice();
+    const sortCol = cols.find(c => c.key === sheetSortKey);
+    if(sortCol){
+      rows.sort((a, b) => {
+        const va = sortCol.get(a), vb = sortCol.get(b);
+        if(sortCol.num){
+          const na = va == null || isNaN(va) ? -Infinity : va;
+          const nb = vb == null || isNaN(vb) ? -Infinity : vb;
+          return (na - nb) * sheetSortDir;
+        }
+        return String(va).localeCompare(String(vb), undefined, {numeric:true, sensitivity:'base'}) * sheetSortDir;
+      });
+    }
 
     document.getElementById('sheetRowCount').textContent = points.length;
     const tbody = document.getElementById('dataSheetBody');
     tbody.innerHTML = "";
-    points.forEach(p => {
+    rows.forEach(p => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="readonly-cell">${escapeHtml(p.address)}</td>
@@ -1189,7 +1249,12 @@ License: MIT
   let weightMode = "priority";
   let hasFit = false;
 
-  // ---------- Sidebar is static/docked in the viewer (no slide-out) ----------
+  // ---------- Collapsible sidebar (desktop) / bottom bar (mobile) ----------
+  const sidebarEl = document.getElementById('sidebar');
+  document.getElementById('sidebarToggle').addEventListener('click', function(){
+    sidebarEl.classList.toggle('collapsed');
+    setTimeout(() => map.invalidateSize(), 260);
+  });
 
   function save(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(points)); }catch(e){}

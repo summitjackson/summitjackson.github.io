@@ -861,5 +861,37 @@
     "source": "paste",
     "approx": false,
     "geoSource": "US Census"
+  },
+  {
+    "id": "p_ab4djabq",
+    "address": "28945 Main St, Millbury, Ohio 43447",
+    "street": "28945 Main St",
+    "city": "Millbury",
+    "state": "Ohio",
+    "zip": "43447",
+    "name": "HAZ Jennifer Rudey",
+    "priority": 2,
+    "priorityLabel": "BD-2",
+    "priorityTime": "",
+    "lastCheckin": "",
+    "nextCheckin": "",
+    "propertyType": "",
+    "extra": {
+      "#": "5",
+      "Priority\n(1 = High)": "BD-2",
+      "Equip & Consult": "TBD",
+      "Deal Name": "HAZ Jennifer Rudey",
+      "Project": "P132041",
+      "BD/Emp.": "Patrick Jones",
+      "Questionnaire Complete": "Yes",
+      "In HubSpot": "FALSE",
+      "Email reply": "FALSE"
+    },
+    "lat": 41.5723927,
+    "lng": -83.4251104,
+    "status": "geocoded",
+    "source": "paste",
+    "approx": false,
+    "geoSource": "OpenStreetMap"
   }
 ]

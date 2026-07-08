@@ -665,12 +665,13 @@
       "In HubSpot": "FALSE",
       "Email reply": "FALSE"
     },
-    "lat": 41.6086994,
-    "lng": -83.4351477,
+    "lat": 41.59121410536056,
+    "lng": -83.43502521514894,
     "status": "geocoded",
     "source": "paste",
-    "approx": true,
-    "geoSource": "OpenStreetMap"
+    "approx": false,
+    "geoSource": "OpenStreetMap",
+    "corrected": true
   },
   {
     "id": "p_tgdvu08e",

@@ -665,8 +665,8 @@
       "In HubSpot": "FALSE",
       "Email reply": "FALSE"
     },
-    "lat": 41.59121410536056,
-    "lng": -83.43502521514894,
+    "lat": 41.590411690842664,
+    "lng": -83.4355401992798,
     "status": "geocoded",
     "source": "paste",
     "approx": false,

@@ -1103,7 +1103,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
             <input type="checkbox" id="autoRefreshToggle" checked style="width:auto;">
             Auto-refresh every 30 seconds
           </label>
-          <small class="hint">Export "data.json" from the dashboard and upload it to the same hosted location, replacing the old copy, whenever the waitlist changes. This page will pick it up automatically &mdash; no upload needed here once it's in place.</small>
           <div class="status-line" id="autoLoadStatus">Checking for data&hellip;</div>
 
           <h2 style="margin-top:18px;">Or load a file manually</h2>
@@ -1113,7 +1112,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
               <input type="file" id="uploadData" accept=".json,.csv,text/csv,application/json">
             </div>
           </div>
-          <small class="hint">Accepts a JSON export or CSV export from the Cousino dashboard (must include Latitude/Longitude, or lat/lng in JSON). Uploading replaces the currently loaded data.</small>
+          <small class="hint">JSON or CSV. Uploading replaces the currently loaded data.</small>
           <div class="status-line" id="loadStatus">No data loaded yet.</div>
           <button class="ghost full" id="btnClearData" style="margin-top:8px;">Clear loaded data</button>
 

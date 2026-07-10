@@ -1258,7 +1258,7 @@ License: MIT
   let focusedMarker = null;
   let heatLayer = null;
   let mode = "both";
-  let weightMode = "priority";
+  let weightMode = "uniform";
   let hasFit = false;
 
   // ---------- Collapsible sidebar (desktop) / bottom bar (mobile) ----------
@@ -1553,7 +1553,10 @@ License: MIT
   document.getElementById('wUniform').addEventListener('click', () => { weightMode="uniform"; setActivePill(['wUniform','wPriority'],'wUniform'); render(); });
   document.getElementById('wPriority').addEventListener('click', () => { weightMode="priority"; setActivePill(['wUniform','wPriority'],'wPriority'); render(); });
   ['rRadius','rBlur','rMaxZoom'].forEach(id => {
-    document.getElementById(id).addEventListener('input', function(){
+    const input = document.getElementById(id);
+    // Keep the label in sync with the slider's real value from the start
+    document.getElementById('v'+id.slice(1)).textContent = input.value;
+    input.addEventListener('input', function(){
       document.getElementById('v'+id.slice(1)).textContent = this.value;
       render();
     });

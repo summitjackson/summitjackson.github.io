@@ -723,8 +723,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
     flex-shrink:0;
     z-index:10;
   }
-  .title-block{display:flex;align-items:baseline;gap:14px;}
-  .title-block h1{font-family:var(--heading);font-size:19px;margin:0;letter-spacing:0.3px;font-weight:700;color:#f2f6fa;}
+  .title-block{display:flex;align-items:center;gap:14px;min-width:0;}
+  .title-block h1{font-family:var(--heading);font-size:19px;margin:0;letter-spacing:0.3px;font-weight:700;color:#f2f6fa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* Logo scales with viewport width, clamped so it never gets comically large or unreadably small */
+  #brandLogo{
+    height:clamp(22px, 3.2vw, 34px);
+    width:auto;
+    max-width:38vw;          /* never crowd out the title/stats on narrow screens */
+    object-fit:contain;
+    display:block;
+    flex-shrink:0;
+  }
   .title-block .tag{
     font-family:var(--mono);font-size:11px;color:var(--flood);
     background:rgba(47,143,214,0.12);border:1px solid rgba(47,143,214,0.35);
@@ -767,7 +776,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
     #sidebarToggle .tgl-mobile{display:inline-block;}
     #map{flex:1;min-height:160px;}
     header{padding:12px 14px;}
+    .title-block{gap:10px;}
     .title-block h1{font-size:15px;}
+    #brandLogo{height:20px;max-width:34vw;}
     .header-stats{gap:14px;}
   }
 
@@ -1013,7 +1024,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 <header>
   <div class="title-block">
-    <h1>Cousino &mdash; Residential Water Waitlist &mdash; July 2026</h1>
+    <img id="brandLogo" src="https://summitjackson.github.io/cousino_white_maptitle.svg" alt="Cousino"
+         onerror="if(!this.dataset.triedPng){this.dataset.triedPng='1';this.src='https://summitjackson.github.io/cousino_white_maptitle.png';}else{this.style.display='none';document.getElementById('brandLogoFallback').style.display='inline';}">
+    <h1><span id="brandLogoFallback" style="display:none;">Cousino &mdash; </span>Residential Water Waitlist &mdash; July 2026</h1>
   </div>
   <div class="header-stats">
     <div class="stat"><b id="statTotal">0</b>total</div>

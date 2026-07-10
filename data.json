@@ -1,6 +1,6 @@
 [
   {
-    "id": "p_emed6rre",
+    "id": "p_bxz6pc8i",
     "address": "2715 N State Route 590, Graytown, Ohio 43432",
     "street": "2715 N State Route 590",
     "city": "Graytown",
@@ -34,7 +34,7 @@
     "geoSource": "US Census"
   },
   {
-    "id": "p_ypvt9vzh",
+    "id": "p_q0sx2gn3",
     "address": "9140 Corduroy Rd, Curtice, Ohio 43412",
     "street": "9140 Corduroy Rd",
     "city": "Curtice",
@@ -67,7 +67,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_xsu9yshq",
+    "id": "p_cwp9qv5f",
     "address": "14929 W Toussaint Rd, Graytown, Ohio 43432",
     "street": "14929 W Toussaint Rd",
     "city": "Graytown",
@@ -102,7 +102,7 @@
     "geoSource": "US Census"
   },
   {
-    "id": "p_a01ruwgf",
+    "id": "p_c040mqze",
     "address": "7222 Corduroy Rd, Oregon, Ohio 43616",
     "street": "7222 Corduroy Rd",
     "city": "Oregon",
@@ -135,7 +135,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_uawjwmkz",
+    "id": "p_lvtnr83q",
     "address": "758 Maple St, Perrysburg, Ohio 43551",
     "street": "758 Maple St",
     "city": "Perrysburg",
@@ -167,7 +167,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_lq9gfoya",
+    "id": "p_arbf5yfe",
     "address": "7154 Brown Rd, Oregon, Ohio 43616",
     "street": "7154 Brown Rd",
     "city": "Oregon",
@@ -199,7 +199,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_w91l50v6",
+    "id": "p_fkeojlxt",
     "address": "6620 Brown Rd, Oregon, Ohio 43616",
     "street": "6620 Brown Rd",
     "city": "Oregon",
@@ -231,7 +231,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_nhyc0yp1",
+    "id": "p_blmx4nzi",
     "address": "1709 N Curtice Rd, Curtice, Ohio 43412",
     "street": "1709 N Curtice Rd",
     "city": "Curtice",
@@ -263,7 +263,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_1ders3tj",
+    "id": "p_ut92rzbk",
     "address": "4419 290th St, Toledo, Ohio 43611",
     "street": "4419 290th St",
     "city": "Toledo",
@@ -297,7 +297,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_el4veo6m",
+    "id": "p_0vee2l86",
     "address": "1723 Perth St, Toledo, Ohio 43607",
     "street": "1723 Perth St",
     "city": "Toledo",
@@ -329,7 +329,39 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_puhohq1z",
+    "id": "p_ef7eeuhn",
+    "address": "25228 John F McCarthy Wy, Perrysburg, Perrysburg, Ohio 43551",
+    "street": "25228 John F McCarthy Wy, Perrysburg",
+    "city": "Perrysburg",
+    "state": "Ohio",
+    "zip": "43551",
+    "name": "WTR Brent Patmos",
+    "priority": 2,
+    "priorityLabel": "2",
+    "priorityTime": "",
+    "lastCheckin": "",
+    "nextCheckin": "",
+    "propertyType": "",
+    "extra": {
+      "#": "11",
+      "Priority\n(1 = High)": "2",
+      "Deal Name": "WTR Brent Patmos",
+      "Project": "P132345",
+      "Latest Status": "A. Waitlist - First call",
+      "Intake Date": "7/9/2026",
+      "Days on List": "1",
+      "In HubSpot": "FALSE",
+      "Email reply": "FALSE"
+    },
+    "lat": 41.516335852905,
+    "lng": -83.693459717934,
+    "status": "geocoded",
+    "source": "sheet",
+    "approx": false,
+    "geoSource": "US Census"
+  },
+  {
+    "id": "p_qzdjih5u",
     "address": "5940 N Martin Williston Rd, Williston, Ohio 43468",
     "street": "5940 N Martin Williston Rd",
     "city": "Williston",
@@ -343,11 +375,12 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "11",
+      "#": "12",
       "Priority\n(1 = High)": "2",
       "Deal Name": "WTR John Crock",
       "Project": "P132059",
       "Latest Status": "A. Waitlist - Oregon BrwnRd",
+      "Column 20": "Needs 20-30 mins head-sup. Earlier = better.",
       "Intake Date": "7/8/2026",
       "Days on List": "2",
       "BD/Emp.": "-",
@@ -363,7 +396,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_062xg8wh",
+    "id": "p_hblomlxk",
     "address": "549 Park Way W, Walbridge, Ohio 43616",
     "street": "549 Park Way W",
     "city": "Walbridge",
@@ -377,7 +410,7 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "12",
+      "#": "13",
       "Priority\n(1 = High)": "2",
       "Deal Name": "WTR Andrea Ciesielczyk",
       "Project": "P132070",
@@ -397,7 +430,7 @@
     "geoSource": "US Census"
   },
   {
-    "id": "p_unimbx8m",
+    "id": "p_ltw8vnkr",
     "address": "6620 Spring Beauty Ct, Curtice, Ohio 43412",
     "street": "6620 Spring Beauty Ct",
     "city": "Curtice",
@@ -411,7 +444,7 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "13",
+      "#": "14",
       "Priority\n(1 = High)": "2",
       "Deal Name": "WTR Paula McGrady",
       "Project": "P132048",
@@ -431,7 +464,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_syz0qhhu",
+    "id": "p_m3azauqr",
     "address": "1522 Bradner Rd, Northwood, Ohio 43619",
     "street": "1522 Bradner Rd",
     "city": "Northwood",
@@ -445,7 +478,7 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "14",
+      "#": "15",
       "Priority\n(1 = High)": "2",
       "Deal Name": "WTR Shannon Kraemer",
       "Project": "P131965",
@@ -464,7 +497,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_7qgkoipr",
+    "id": "p_g8sq7rwc",
     "address": "3207 Tersa Dr, Oregon, Ohio 43616",
     "street": "3207 Tersa Dr",
     "city": "Oregon",
@@ -478,7 +511,7 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "15",
+      "#": "16",
       "Priority\n(1 = High)": "2",
       "Deal Name": "WTR Annie Smith",
       "Project": "P131945",
@@ -497,7 +530,7 @@
     "geoSource": "US Census"
   },
   {
-    "id": "p_hdl3to6v",
+    "id": "p_xmkfa323",
     "address": "24160 W Young Rd, Millbury, Ohio 43447",
     "street": "24160 W Young Rd",
     "city": "Millbury",
@@ -511,7 +544,7 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "16",
+      "#": "17",
       "Priority\n(1 = High)": "5",
       "Deal Name": "WTR Caleb Therrien",
       "Project": "P131966",
@@ -530,7 +563,7 @@
     "geoSource": "US Census"
   },
   {
-    "id": "p_1a978opv",
+    "id": "p_hl7292wh",
     "address": "201 E Perry St, Walbridge, Ohio 43465",
     "street": "201 E Perry St",
     "city": "Walbridge",
@@ -544,7 +577,7 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "17",
+      "#": "18",
       "Priority\n(1 = High)": "5",
       "Deal Name": "WTR Kathryn Boyd",
       "Project": "P132100",
@@ -565,7 +598,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_ca99v539",
+    "id": "p_s3il4drv",
     "address": "22380 Honeysuckle Ln, Curtice, Ohio 43412",
     "street": "22380 Honeysuckle Ln",
     "city": "Curtice",
@@ -579,7 +612,7 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "18",
+      "#": "19",
       "Priority\n(1 = High)": "5",
       "Deal Name": "WTR Sara Riegel",
       "Project": "P132060",
@@ -600,7 +633,7 @@
     "geoSource": "OpenStreetMap"
   },
   {
-    "id": "p_8j9t3yux",
+    "id": "p_bzevxu5e",
     "address": "15051 W State Route 2, Oak Harbor, Ohio 43449",
     "street": "15051 W State Route 2",
     "city": "Oak Harbor",
@@ -614,7 +647,7 @@
     "nextCheckin": "",
     "propertyType": "",
     "extra": {
-      "#": "19",
+      "#": "20",
       "Priority\n(1 = High)": "5",
       "Deal Name": "WTR Billy Tye",
       "Project": "P132247",

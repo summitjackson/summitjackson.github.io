@@ -1261,7 +1261,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <h2>Geocoding queue</h2>
         <div class="status-line" id="geoStatus">Idle.</div>
         <div class="row" style="margin-top:8px;">
-          <button class="ghost full" id="btnRetryFailed">Retry failed</button>
+          <button class="ghost full" id="btnRetryFailed">Retry failed &amp; approximate</button>
           <button class="ghost full" id="btnClearAll">Clear all</button>
         </div>
       </section>
@@ -1961,17 +1961,36 @@ License: MIT
 
   function fetchGeocodeHit(url){
     return fetch(url, {headers: {"Accept":"application/json"}})
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : null)
       .then(arr => {
         if(arr && arr.length > 0){
           const hit = arr[0];
-          // House-level precision types from Nominatim; anything else is a broader/approximate match
-          const preciseTypes = ["house", "building", "residential", "yes"];
-          const approx = !(hit.address && hit.address.house_number) && !preciseTypes.includes(hit.type);
-          return {lat: parseFloat(hit.lat), lng: parseFloat(hit.lon), approx, source: "OpenStreetMap"};
+          // House-level precision: the result must actually resolve to a specific building.
+          // A house_number in the address breakdown, or a building/house feature, is precise.
+          // NOTE: a bare type of "residential" is usually a residential *road* or landuse area,
+          // not a house, so it must NOT be treated as precise on its own.
+          const precise = !!(hit.address && hit.address.house_number)
+            || hit.class === "building"
+            || hit.type === "house"
+            || hit.addresstype === "house"
+            || hit.addresstype === "building";
+          return {lat: parseFloat(hit.lat), lng: parseFloat(hit.lon), approx: !precise, source: "OpenStreetMap"};
         }
         return null;
-      });
+      })
+      // A rate-limit, network hiccup, or non-JSON block page must count as a MISS for this
+      // one service, not blow up the whole chain -- otherwise the Census fallback never runs.
+      .catch(() => null);
+  }
+
+  // Spreadsheets often contain placeholder text instead of a real street ("[No specific
+  // address]", "N/A", "TBD", "unknown", dashes). Sending these to a geocoder guarantees a
+  // failure, so strip them out and geocode on city/state/zip instead.
+  function sanitizeStreet(street){
+    if(!street) return "";
+    let s = String(street).replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+    if(/^(n\/?a|none|null|unknown|tbd|pending|-+|no\s+(specific\s+)?address.*)$/i.test(s)) return "";
+    return s;
   }
 
   function sleep(ms){
@@ -2023,38 +2042,71 @@ License: MIT
   }
 
   async function geocodeAddress(point){
-    const hasStructured = !!(point.street || point.city || point.state || point.zip);
-    if(hasStructured){
+    const street = sanitizeStreet(point.street);
+    const hasLocality = !!(point.city || point.state || point.zip);
+    // Rebuild the query address with the sanitized street so placeholder junk like
+    // "[No specific address]" never reaches a geocoder.
+    const cleanAddr = (street || hasLocality)
+      ? buildAddress(street, point.city, point.state, point.zip)
+      : sanitizeStreet(point.address) || point.address;
+
+    // Keep the first approximate hit as a fallback, but keep trying other services for a
+    // house-level (non-approximate) match before settling for it. This is what lets the
+    // US Census geocoder upgrade a street-centerline OSM match to a rooftop-accurate one.
+    let approxFallback = null;
+    function takeIfPrecise(hit){
+      if(hit && !approxFallback) approxFallback = hit;
+      return (hit && !hit.approx) ? hit : null;
+    }
+
+    // 1) Nominatim structured search (strict, most accurate when it matches)
+    if(street || hasLocality){
       const params = new URLSearchParams({format: "json", addressdetails: "1", limit: "1"});
-      if(point.street) params.set("street", point.street);
+      if(street) params.set("street", street);
       if(point.city) params.set("city", point.city);
       if(point.state) params.set("state", point.state);
       if(point.zip) params.set("postalcode", point.zip);
-      const structuredUrl = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
-      const structuredHit = await fetchGeocodeHit(structuredUrl);
-      if(structuredHit) return structuredHit;
-
-      // Structured search is strict (requires close-to-exact street/city/state/zip matches) and
-      // fails on things like "State Route 590" or directional prefixes ("N", "W") that OSM stores
-      // differently. Freeform search is far more forgiving, so fall back to it before giving up.
-      await sleep(1100); // stay within Nominatim's ~1 req/sec usage policy
-      const freeformUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(point.address)}`;
-      const freeformHit = await fetchGeocodeHit(freeformUrl);
-      if(freeformHit) return freeformHit;
-
-      // Last resort: US Census Geocoder, which frequently covers rural/highway addresses
-      // that OpenStreetMap doesn't.
-      return await censusGeocodeJsonp(point.address);
-    } else {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(point.address)}`;
-      const hit = await fetchGeocodeHit(url);
+      const hit = takeIfPrecise(await fetchGeocodeHit(`https://nominatim.openstreetmap.org/search?${params.toString()}`));
       if(hit) return hit;
-      return await censusGeocodeJsonp(point.address);
+      await sleep(1100); // stay within Nominatim's ~1 req/sec usage policy
     }
+
+    // 2) Nominatim freeform search (forgiving about "State Route 590", "N"/"W" prefixes, etc.)
+    {
+      const hit = takeIfPrecise(await fetchGeocodeHit(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(cleanAddr)}`));
+      if(hit) return hit;
+    }
+
+    // 3) US Census Geocoder (TIGER address ranges): frequently has house numbers on rural
+    // and suburban roads that OSM lacks. Only meaningful when we actually have a street.
+    if(street || !hasLocality){
+      const hit = await censusGeocodeJsonp(cleanAddr);
+      if(hit) return hit;
+    }
+
+    // 4) No house-level match anywhere, but OSM gave us a street- or town-level match
+    // earlier -- use it (it stays flagged "approximate") rather than failing the point.
+    if(approxFallback) return approxFallback;
+
+    // 5) Absolute last resort: drop the pin at the center of the city/zip, clearly
+    // flagged approximate, instead of reporting a hard failure.
+    if(hasLocality){
+      await sleep(1100);
+      const cityQuery = buildAddress("", point.city, point.state, point.zip);
+      const hit = await fetchGeocodeHit(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(cityQuery)}`);
+      if(hit) return {lat: hit.lat, lng: hit.lng, approx: true, source: "OpenStreetMap (city/zip center)"};
+    }
+    return null;
   }
 
   document.getElementById('btnRetryFailed').addEventListener('click', function(){
-    points.forEach(p => { if(p.status === "failed") p.status = "pending"; });
+    // Re-queue hard failures AND approximate matches (the Census fallback can often upgrade
+    // an approximate street/town-level match to a house-level one). Never touch points the
+    // user has manually corrected.
+    points.forEach(p => {
+      if(p.status === "failed" && !p.corrected) p.status = "pending";
+      if(p.status === "geocoded" && p.approx && !p.corrected) p.status = "pending";
+    });
     save(); render(); runGeocodeQueue();
   });
 

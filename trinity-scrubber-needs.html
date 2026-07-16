@@ -1106,10 +1106,11 @@ License: MIT
   "use strict";
 
   /* ==========================================================================
-     PASTE YOUR APPS SCRIPT URL HERE
-     Deploy trinity-sheet-backend.gs from your Sheet (Extensions > Apps Script >
-     Deploy > New deployment > Web app), then paste the /exec URL between the quotes.
-     Until you do, the map falls back to the read-only GitHub CSV and nothing saves.
+     CONFIG
+     SHEET_API_URL is the deployed Apps Script Web app URL for the Trinity sheet.
+     If you ever re-deploy from scratch and the URL changes, replace it here.
+     (Editing the script and choosing Deploy > Manage deployments > New version
+     keeps the same URL, so you should rarely need to touch this.)
      ========================================================================== */
   const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwSVO7VbwlsTyMQWzyxqb46bZEVGolLHbnBxvhpU-pg9-oVZQyc_a-yu72wIyNsics/exec";
 
@@ -1319,40 +1320,115 @@ License: MIT
     return null;
   }
 
-  function apiUrl(params){
+  // Once a normal cross-origin request has been refused, stop trying it and use JSONP for
+  // the rest of the session. Flipping back and forth would just double every failure.
+  let useJsonp = false;
+
+  function buildUrl(params){
     const u = new URL(SHEET_API_URL);
-    Object.keys(params || {}).forEach(k => u.searchParams.set(k, params[k]));
+    Object.keys(params || {}).forEach(k => {
+      if(params[k] !== undefined && params[k] !== null) u.searchParams.set(k, params[k]);
+    });
     if(SHARED_SECRET) u.searchParams.set("secret", SHARED_SECRET);
     u.searchParams.set("_", Date.now()); // defeat caching between us and the Sheet
-    return u.toString();
+    return u;
+  }
+
+  function apiUrl(params){ return buildUrl(params).toString(); }
+
+  /**
+   * Loads the reply through a <script> tag instead of fetch. Script tags predate CORS and
+   * aren't governed by it, so this still works when an extension, a strict privacy setting
+   * or an awkward redirect kills the normal request. The Apps Script side returns
+   * JavaScript instead of JSON whenever it sees a ?callback= parameter.
+   */
+  function jsonpCall(params){
+    return new Promise((resolve, reject) => {
+      const cb = "trinityCb_" + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      let finished = false;
+
+      function cleanup(){
+        delete window[cb];
+        if(script.parentNode) script.parentNode.removeChild(script);
+      }
+      window[cb] = function(data){
+        finished = true; cleanup();
+        resolve(data);
+      };
+      script.onerror = function(){
+        if(finished) return;
+        cleanup();
+        reject(new Error(
+          "The browser couldn't load anything from that URL. Check the /exec URL is right, " +
+          "that the deployment uses Execute as: Me and Who has access: Anyone, and that an " +
+          "ad blocker isn't blocking script.google.com."
+        ));
+      };
+
+      const u = buildUrl(params);
+      u.searchParams.set("callback", cb);
+      script.src = u.toString();
+      document.head.appendChild(script);
+
+      setTimeout(() => {
+        if(finished) return;
+        cleanup();
+        reject(new Error("The Sheet didn't answer in time. It may be waking up -- try Refresh now."));
+      }, 20000);
+    });
+  }
+
+  /** Read or write, over fetch when that works and JSONP when it doesn't. */
+  function callSheet(params, postBody){
+    if(useJsonp) return jsonpCall(params);
+
+    const req = postBody
+      ? fetch(SHEET_API_URL, {
+          method: "POST",
+          headers: {"Content-Type": "text/plain;charset=utf-8"},
+          body: JSON.stringify(postBody)
+        })
+      : fetch(apiUrl(params), {method: "GET"});
+
+    return req
+      .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return readJson(r); })
+      .catch(err => {
+        // A TypeError here is the browser refusing the request outright (CORS, blocked
+        // host, dead redirect) rather than the Sheet objecting to it. Those are exactly
+        // the cases JSONP sails through, so switch over and retry once.
+        const networkLevel = (err instanceof TypeError) || /NetworkError|Failed to fetch|Load failed|CORS/i.test(err.message || "");
+        if(!networkLevel) throw err;
+        useJsonp = true;
+        return jsonpCall(params);
+      });
   }
 
   function fetchSheet(){
-    return fetch(apiUrl({action:"load"}), {method:"GET"})
-      .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return readJson(r); })
+    return callSheet({action:"load"})
       .then(data => {
-        if(!data.ok) throw new Error(data.error || "The Sheet refused the request.");
+        if(!data || !data.ok) throw new Error((data && data.error) || "The Sheet refused the request.");
         return data;
       });
   }
 
   /**
-   * Writes go out as text/plain on purpose. An application/json content type makes the
-   * browser send a CORS preflight, and Apps Script cannot answer one -- the save would
-   * fail before it ever reached the Sheet. text/plain keeps it a "simple request".
+   * Writes prefer a POST with Content-Type: text/plain -- a JSON content type would make
+   * the browser fire a CORS preflight that Apps Script cannot answer. If the POST is
+   * refused at the network level, callSheet retries the same write as a JSONP GET, whose
+   * parameters have to be flat strings, hence the crews array being stringified.
    */
   function postToSheet(payload){
     if(!connected) return Promise.reject(new Error("Not connected to the Sheet."));
     const body = Object.assign({}, payload);
     if(SHARED_SECRET) body.secret = SHARED_SECRET;
-    return fetch(SHEET_API_URL, {
-      method: "POST",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
-      body: JSON.stringify(body)
-    })
-      .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return readJson(r); })
+
+    const params = Object.assign({}, payload);
+    if(params.crews) params.crews = JSON.stringify(params.crews);
+
+    return callSheet(params, body)
       .then(res => {
-        if(!res.ok) throw new Error(res.error || "The Sheet rejected the change.");
+        if(!res || !res.ok) throw new Error((res && res.error) || "The Sheet rejected the change.");
         lastUpdated = res.updatedAt || lastUpdated;
         markConnected();
         return res;

@@ -1037,19 +1037,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
             <label for="uploadData">Upload CSV or JSON</label>
             <input type="file" id="uploadData" accept=".json,.csv,text/csv,application/json">
           </div>
-          <small class="hint">Expected columns: Location Name, Street Address, City, State, Zip. Crew assignments and completions are kept when you reload the same list.</small>
+          <small class="hint">Expected columns: Location Name, Address (or Street Address), City, State, Zip. Uploading overrides the hosted list until you reload the page.</small>
           <div class="status-line" id="loadStatus">No data loaded yet.</div>
 
           <h2 style="margin-top:18px;">Auto-load from a hosted file</h2>
           <div class="field">
             <label for="autoFileName">Data URL (filename, or full URL)</label>
-            <input type="text" id="autoFileName" placeholder="https://example.com/scrubbers.csv">
+            <input type="text" id="autoFileName" value="https://summitjackson.github.io/trinitysheet.csv">
           </div>
           <div class="row">
             <button class="primary full" id="btnAutoLoadNow">Load now</button>
           </div>
-          <label class="checkline"><input type="checkbox" id="autoRefreshToggle"> Auto-refresh every 30 seconds</label>
-          <div class="status-line" id="autoLoadStatus">Not checking for a hosted file.</div>
+          <label class="checkline"><input type="checkbox" id="autoRefreshToggle" checked> Auto-refresh every 30 seconds</label>
+          <div class="status-line" id="autoLoadStatus">Checking for data&hellip;</div>
 
           <h2 style="margin-top:18px;">Geocoding</h2>
           <div class="status-line" id="geoStatus">Idle.</div>
@@ -1180,7 +1180,10 @@ License: MIT
   const CHECK_PATH = "M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z";
 
   // ---------- Map ----------
-  const map = L.map('map', {preferCanvas:false}).setView([41.9166, -83.3958], 11);
+  // Opening view covers the northwest Ohio service area (Toledo down to Findlay, Kalida
+  // east to Ashland). It only shows for a moment -- the map refits to the real stops once
+  // they're geocoded -- but it stops the first paint landing on the wrong state.
+  const map = L.map('map', {preferCanvas:false}).setView([41.30, -83.20], 8);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap contributors'
@@ -1907,6 +1910,10 @@ License: MIT
     statusEl.className = "status-line done";
   }
   render();
+  // Pull the hosted list straight away, so a fresh browser lands on the same stops as
+  // everyone else instead of an empty map. Cached rows above just avoid a blank first
+  // paint while this request is in flight.
+  fetchAutoFile(true);
   setupAutoRefresh();
   runGeocodeQueue();
 

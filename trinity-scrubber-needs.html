@@ -1111,7 +1111,7 @@ License: MIT
      Deploy > New deployment > Web app), then paste the /exec URL between the quotes.
      Until you do, the map falls back to the read-only GitHub CSV and nothing saves.
      ========================================================================== */
-  const SHEET_API_URL = "https://docs.google.com/spreadsheets/d/1jAkfGTAH0f9GAIoWvhl3mcO7NqvlKS0jdNdvrA99_j0/edit?usp=sharing";
+  const SHEET_API_URL = "";
 
   // Only needed if you set SHARED_SECRET in the Apps Script. Must match it exactly.
   const SHARED_SECRET = "";
@@ -1258,6 +1258,67 @@ License: MIT
   }
 
   // ---------- Transport ----------
+  /**
+   * Apps Script answers with an HTML page instead of JSON whenever something is wrong with
+   * the deployment -- a sign-in wall, an authorization prompt, a crash. JSON.parse then
+   * fails with "unexpected character", which tells nobody anything. So sniff the body and
+   * translate it into the thing you actually need to go change.
+   */
+  function readJson(r){
+    return r.text().then(text => {
+      const head = text.slice(0, 600).toLowerCase();
+      try{
+        return JSON.parse(text);
+      }catch(e){
+        if(head.indexOf("<!doctype") !== -1 || head.indexOf("<html") !== -1){
+          if(head.indexOf("accounts.google") !== -1 || head.indexOf("sign in") !== -1 ||
+             head.indexOf("signin") !== -1 || head.indexOf("choose an account") !== -1){
+            throw new Error(
+              "Google returned a sign-in page, so the script is not public. In Apps Script: " +
+              "Deploy > Manage deployments > pencil > set 'Who has access' to Anyone " +
+              "(NOT 'Anyone with a Google account'), pick Version: New version, then Deploy."
+            );
+          }
+          if(head.indexOf("authorization is required") !== -1 || head.indexOf("authorize") !== -1){
+            throw new Error(
+              "The script has not been authorized yet. Open it in the Apps Script editor, press Run once, " +
+              "and approve the permissions prompt. Then re-deploy as a New version."
+            );
+          }
+          if(head.indexOf("script function not found") !== -1 || head.indexOf("doget") !== -1){
+            throw new Error(
+              "The deployment has no doGet function. Make sure the whole backend file is pasted in, " +
+              "saved, and re-deployed as a New version."
+            );
+          }
+          throw new Error(
+            "Got a web page instead of data. Check the URL is the deployed Web app URL ending in /exec " +
+            "(not /dev, and not the editor URL), and that access is set to Anyone."
+          );
+        }
+        throw new Error("Unreadable reply from the Sheet: " + text.slice(0, 80));
+      }
+    });
+  }
+
+  /** Catch an obviously wrong URL before we ever make a request. */
+  function urlProblem(){
+    const u = SHEET_API_URL;
+    if(/\/dev(\?|#|$)/.test(u)){
+      return "That is the /dev test URL, which always demands a Google sign-in. Use the /exec URL from " +
+             "Deploy > Manage deployments instead.";
+    }
+    if(/script\.google\.com\/home|\/edit(\?|#|$)/.test(u)){
+      return "That is the Apps Script editor URL, not the deployed app. Use Deploy > Manage deployments " +
+             "and copy the Web app URL ending in /exec.";
+    }
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/.test(u)){
+      return "That does not look like an Apps Script Web app URL. It should look like " +
+             "https://script.google.com/macros/s/AKfycb.../exec";
+    }
+    return null;
+  }
+
   function apiUrl(params){
     const u = new URL(SHEET_API_URL);
     Object.keys(params || {}).forEach(k => u.searchParams.set(k, params[k]));
@@ -1268,7 +1329,7 @@ License: MIT
 
   function fetchSheet(){
     return fetch(apiUrl({action:"load"}), {method:"GET"})
-      .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return readJson(r); })
       .then(data => {
         if(!data.ok) throw new Error(data.error || "The Sheet refused the request.");
         return data;
@@ -1289,7 +1350,7 @@ License: MIT
       headers: {"Content-Type": "text/plain;charset=utf-8"},
       body: JSON.stringify(body)
     })
-      .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return readJson(r); })
       .then(res => {
         if(!res.ok) throw new Error(res.error || "The Sheet rejected the change.");
         lastUpdated = res.updatedAt || lastUpdated;
@@ -1373,9 +1434,11 @@ License: MIT
     if(!SHEET_API_URL){
       return loadFallbackCsv("No Apps Script URL is set in this file yet.");
     }
+    const bad = urlProblem();
+    if(bad) return loadFallbackCsv(bad);
     return fetchSheet()
       .then(data => { applyServerData(data); markConnected(); })
-      .catch(err => loadFallbackCsv("Couldn't reach the Google Sheet (" + err.message + ")."));
+      .catch(err => loadFallbackCsv(err.message));
   }
 
   // ---------- Polling ----------
